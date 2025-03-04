@@ -1,7 +1,18 @@
-.player-list-container {
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding: 24px;
+  height: 100%;
+}
+
+.list-card {
   background: white;
   border-radius: 16px;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .header {
@@ -28,92 +39,56 @@
 .player-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  flex: 1;
 }
 
-.player-card {
-  display: flex;
-  align-items: flex-start;
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 12px;
-  gap: 16px;
+.list-header {
+  display: grid;
+  grid-template-columns: 0.7fr 0.5fr 2fr 0.8fr 0.8fr;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #666;
 
-  &:hover {
-    background: #f5f5f5;
+  .list-card:nth-child(2) &,
+  .list-card:nth-child(3) & {
+    grid-template-columns: 0.8fr 2fr 0.8fr;
   }
 }
 
-.player-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
+.player-row {
+  display: grid;
+  grid-template-columns: 0.7fr 0.5fr 2fr 0.8fr 0.8fr;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
   align-items: center;
-  justify-content: center;
-  font-weight: 500;
-  color: white;
 
-  &.red { background: #ef5350; }
-  &.blue { background: #42a5f5; }
-}
+  &:hover {
+    background: #f9f9f9;
+  }
 
-.player-details {
-  flex: 1;
+  .list-card:nth-child(2) &,
+  .list-card:nth-child(3) & {
+    grid-template-columns: 0.8fr 2fr 0.8fr;
+  }
 
-  h3 {
-    margin: 0 0 4px 0;
-    font-size: 16px;
+  .name {
     font-weight: 500;
   }
 
-  .stats {
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 8px;
-  }
-}
-
-.tags {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-
-  .tag {
-    background: #e0f2f1;
+  .rating {
+    font-weight: 500;
     color: #004d40;
-    padding: 4px 12px;
-    border-radius: 16px;
-    font-size: 12px;
   }
 }
 
-.meta {
-  display: flex;
-  gap: 16px;
-  color: #666;
-  font-size: 12px;
-
-  .location::before {
-    content: "📍";
-    margin-right: 4px;
-  }
-
-  .time::before {
-    content: "🕒";
-    margin-right: 4px;
-  }
-}
-
-.expand-button {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
-  
-  &:hover {
-    background: #eee;
+// Responsive adjustments
+@media (max-width: 1200px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
   }
 }
