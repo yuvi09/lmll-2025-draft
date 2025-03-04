@@ -5,7 +5,9 @@ import { NxWelcomeComponent } from './nx-welcome.component';
 @Component({
   imports: [NxWelcomeComponent, RouterModule],
   selector: 'app-root',
-  templateUrl: './app.component.html',
+  template: `
+    <router-outlet></router-outlet>
+  `,
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
