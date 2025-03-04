@@ -10,15 +10,15 @@
         <span>Grade</span>
         <span>Age</span>
         <span>Name</span>
-        <span>Tryout</span>
-        <span>Last Year</span>
+        <span>Rating</span>
+        <span>Division</span>
       </div>
       <div class="player-row" *ngFor="let player of recentPlayers">
         <span>{{player.grade}}</span>
         <span>{{player.age}}</span>
         <span class="name">{{player.name}}</span>
-        <span class="rating">{{player.tryoutRating}}</span>
-        <span class="rating">{{player.lastYearRating}}</span>
+        <span class="rating">{{player.rating}}</span>
+        <span>{{player.lastYearDivision || '-'}}</span>
       </div>
     </div>
   </div>
@@ -38,7 +38,7 @@
       <div class="player-row" *ngFor="let player of thirdGradePlayers">
         <span>{{player.age}}</span>
         <span class="name">{{player.name}}</span>
-        <span class="rating">{{player.currentRating}}</span>
+        <span class="rating">{{player.rating}}</span>
       </div>
     </div>
   </div>
@@ -58,7 +58,7 @@
       <div class="player-row" *ngFor="let player of secondGradePlayers">
         <span>{{player.age}}</span>
         <span class="name">{{player.name}}</span>
-        <span class="rating">{{player.currentRating}}</span>
+        <span class="rating">{{player.rating}}</span>
       </div>
     </div>
   </div>
