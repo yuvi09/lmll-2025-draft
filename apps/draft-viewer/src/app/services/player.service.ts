@@ -33,7 +33,7 @@ export class PlayerService {
   constructor(private http: HttpClient) {}
 
   getPlayers(): Observable<Player[]> {
-    return this.http.get<RawPlayer[]>('assets/data/player_ratings.json').pipe(
+    return this.http.get<RawPlayer[]>('/assets/data/player_ratings.json').pipe(
       map(players => players.map(p => ({
         grade: p.Grd,
         name: p.Name,

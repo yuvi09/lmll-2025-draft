@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { PlayerService, Player } from '../services/player.service';
 
 @Component({
   selector: 'app-player-list',
   standalone: true,
   imports: [
-    CommonModule,
-    HttpClientModule
+    CommonModule
   ],
   providers: [PlayerService],
   templateUrl: './player-list.component.html',
