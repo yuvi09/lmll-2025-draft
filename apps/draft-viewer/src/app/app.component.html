@@ -1,12 +1,35 @@
-<div class="app-container">
+<div class="app-container" [class.nav-collapsed]="isNavCollapsed">
   <nav class="sidebar">
-    <div class="nav-header">LMLL 2025 DRAFT</div>
-    <a routerLink="/top-picks" routerLinkActive="active">Top Picks</a>
-    <a routerLink="/team-selected" routerLinkActive="active">Team Selected</a>
-    <a routerLink="/top-batters" routerLinkActive="active">Top Batters</a>
-    <a routerLink="/top-pitchers" routerLinkActive="active">Top Pitchers</a>
-    <a routerLink="/second-grade" routerLinkActive="active">Top 2nd Graders</a>
-    <a routerLink="/third-grade" routerLinkActive="active">Top 3rd Graders</a>
+    <div class="nav-header">
+      <span class="title" [class.hidden]="isNavCollapsed">LMLL 2025 DRAFT</span>
+      <button class="toggle-btn" (click)="toggleNav()">
+        {{ isNavCollapsed ? '→' : '←' }}
+      </button>
+    </div>
+    <a routerLink="/top-picks" routerLinkActive="active">
+      <i class="nav-icon">🏆</i>
+      <span [class.hidden]="isNavCollapsed">Top Picks</span>
+    </a>
+    <a routerLink="/team-selected" routerLinkActive="active">
+      <i class="nav-icon">👥</i>
+      <span [class.hidden]="isNavCollapsed">Team Selected</span>
+    </a>
+    <a routerLink="/top-batters" routerLinkActive="active">
+      <i class="nav-icon">🏏</i>
+      <span [class.hidden]="isNavCollapsed">Top Batters</span>
+    </a>
+    <a routerLink="/top-pitchers" routerLinkActive="active">
+      <i class="nav-icon">⚾</i>
+      <span [class.hidden]="isNavCollapsed">Top Pitchers</span>
+    </a>
+    <a routerLink="/second-grade" routerLinkActive="active">
+      <i class="nav-icon">2️⃣</i>
+      <span [class.hidden]="isNavCollapsed">Top 2nd Graders</span>
+    </a>
+    <a routerLink="/third-grade" routerLinkActive="active">
+      <i class="nav-icon">3️⃣</i>
+      <span [class.hidden]="isNavCollapsed">Top 3rd Graders</span>
+    </a>
   </nav>
   
   <main class="main-content">
