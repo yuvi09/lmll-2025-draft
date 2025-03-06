@@ -194,7 +194,7 @@
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   padding: 20px;
-  width: 600px;
+  width: 700px;
   justify-self: start;
   margin-left: 0;
 
@@ -209,7 +209,7 @@
     .form-row {
       display: flex;
       gap: 20px;
-      align-items: flex-start;
+      align-items: flex-end;
 
       .form-group {
         display: flex;
@@ -262,17 +262,17 @@
           flex: 1;
           min-width: 200px;
         }
+
+        &.button-group {
+          flex: 0 0 auto;
+          margin-bottom: 0;
+        }
       }
     }
 
-    .button-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
-
     .add-btn {
-      padding: 8px 16px;
+      height: 36px;
+      padding: 0 16px;
       background: #3b82f6;
       color: white;
       border: none;
@@ -281,6 +281,7 @@
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
 
       &:hover {
         background: #2563eb;

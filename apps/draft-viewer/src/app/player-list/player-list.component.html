@@ -30,15 +30,16 @@
                  class="form-input"
                  [matAutocomplete]="auto">
         </div>
+        <div class="form-group button-group">
+          <label>&nbsp;</label> <!-- Empty label to align with other inputs -->
+          <button class="add-btn" (click)="addPick()">Add Pick</button>
+        </div>
       </div>
       <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onPlayerSelected($event)">
         <mat-option *ngFor="let player of filteredPlayers" [value]="player.name">
           {{player.name}} ({{player.grade}})
         </mat-option>
       </mat-autocomplete>
-      <div class="button-row">
-        <button class="add-btn" (click)="addPick()">Add Pick</button>
-      </div>
     </div>
   </div>
   
