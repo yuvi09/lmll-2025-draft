@@ -1,4 +1,46 @@
 <div class="cards-grid">
+
+    <!-- Add Pick Card -->
+  <div class="list-card add-pick-card">
+    <div class="header">
+      <h2>Add Pick</h2>
+    </div>
+    <div class="add-pick-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Team No.</label>
+          <input type="number" [(ngModel)]="newPick.teamNo" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Grade</label>
+          <select [(ngModel)]="newPick.grade" class="form-input">
+            <option value="2nd">2nd</option>
+            <option value="3rd">3rd</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Draft #</label>
+          <input type="number" [(ngModel)]="newPick.draftNo" class="form-input">
+        </div>
+        <div class="form-group name-group">
+          <label>Name</label>
+          <input type="text" 
+                 [(ngModel)]="newPick.name" 
+                 (input)="onNameSearch($event)"
+                 class="form-input"
+                 [matAutocomplete]="auto">
+        </div>
+      </div>
+      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onPlayerSelected($event)">
+        <mat-option *ngFor="let player of filteredPlayers" [value]="player.name">
+          {{player.name}} ({{player.grade}})
+        </mat-option>
+      </mat-autocomplete>
+      <div class="button-row">
+        <button class="add-btn" (click)="addPick()">Add Pick</button>
+      </div>
+    </div>
+  </div>
   
   <!-- Top 3rd Graders -->
   <div class="list-card">
@@ -77,5 +119,7 @@
       </div>
     </div>
   </div>
+
+  
 
 </div>

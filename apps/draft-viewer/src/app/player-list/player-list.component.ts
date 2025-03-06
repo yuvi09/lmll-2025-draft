@@ -1,15 +1,30 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatOptionModule } from '@angular/material/core';
 import { PlayerService, Player } from '../services/player.service';
 
 interface ExtendedPlayer extends Player {
   comments: string[];
 }
 
+interface NewPick {
+  teamNo: number | undefined;
+  grade: string;
+  draftNo: number | undefined;
+  name: string;
+}
+
 @Component({
   selector: 'app-player-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatAutocompleteModule,
+    MatOptionModule
+  ],
   providers: [PlayerService],
   templateUrl: './player-list.component.html',
   styleUrls: ['./player-list.component.scss']
@@ -19,6 +34,14 @@ export class PlayerListComponent implements OnInit {
   thirdGradePlayers: Player[] = [];
   secondGradePlayers: Player[] = [];
   error: string | null = null;
+  newPick: NewPick = {
+    teamNo: undefined,
+    grade: '3rd',
+    draftNo: undefined,
+    name: ''
+  };
+  allPlayers: Player[] = [];
+  filteredPlayers: Player[] = [];
 
   constructor(private playerService: PlayerService) {}
 
@@ -57,6 +80,10 @@ export class PlayerListComponent implements OnInit {
         this.error = 'Failed to load players';
       }
     });
+
+    this.playerService.getPlayers().subscribe(players => {
+      this.allPlayers = players;
+    });
   }
 
   updatePickOrder(player: ExtendedPlayer, event: Event) {
@@ -75,5 +102,41 @@ export class PlayerListComponent implements OnInit {
 
   removePlayer(player: ExtendedPlayer) {
     // Implement remove player logic
+  }
+
+  onNameSearch(event: any) {
+    const value = event.target.value.toLowerCase();
+    this.filteredPlayers = this.allPlayers.filter(player => 
+      player.name.toLowerCase().includes(value)
+    ).slice(0, 5);
+  }
+
+  onPlayerSelected(event: any) {
+    const selectedPlayer = this.allPlayers.find(p => p.name === event.option.value);
+    if (selectedPlayer) {
+      this.newPick.grade = selectedPlayer.grade;
+    }
+  }
+
+  addPick() {
+    if (!this.newPick.teamNo || !this.newPick.draftNo || !this.newPick.name) {
+      return;
+    }
+    
+    const selectedPlayer = this.allPlayers.find(p => p.name === this.newPick.name);
+    if (selectedPlayer) {
+      this.recentPlayers.unshift({
+        ...selectedPlayer,
+        comments: (selectedPlayer.Comments || '').split(',').map(c => c.trim()).filter(c => c)
+      });
+      
+      // Reset form
+      this.newPick = {
+        teamNo: undefined,
+        grade: '3rd',
+        draftNo: undefined,
+        name: ''
+      };
+    }
   }
 }

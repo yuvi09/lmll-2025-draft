@@ -1,9 +1,12 @@
 .cards-grid {
   display: grid;
+  grid-template-areas: 
+    "add-pick add-pick add-pick"
+    "third-grade second-grade team-picks";
   grid-template-columns: 1fr 1fr 1.25fr;
   gap: 24px;
   padding: 24px;
-  background-color: #f5f7fa;
+  background-color: #f8fafc;
 }
 
 .list-card {
@@ -182,5 +185,116 @@
     .list-card {
       max-width: 100%;
     }
+  }
+}
+
+.add-pick-card {
+  grid-area: add-pick;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  width: 600px;
+  justify-self: start;
+  margin-left: 0;
+
+  h2 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1e293b;
+    margin: 0 0 20px 0;
+  }
+
+  .add-pick-form {
+    .form-row {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        label {
+          font-size: 13px;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        input, select {
+          height: 36px;
+          padding: 0 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 14px;
+          color: #1e293b;
+          background: white;
+          transition: all 0.2s;
+
+          &:hover {
+            border-color: #cbd5e1;
+          }
+
+          &:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+          }
+        }
+
+        select {
+          padding-right: 30px;
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 8px center;
+          background-size: 16px;
+        }
+
+        &:nth-child(1), 
+        &:nth-child(2),
+        &:nth-child(3) {
+          width: 100px;
+        }
+
+        &.name-group {
+          flex: 1;
+          min-width: 200px;
+        }
+      }
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .add-btn {
+      padding: 8px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #2563eb;
+      }
+
+      &:active {
+        transform: translateY(1px);
+      }
+    }
+  }
+}
+
+@media (max-width: 700px) {
+  .add-pick-card {
+    width: 100%;
   }
 }
