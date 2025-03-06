@@ -1,28 +1,5 @@
 <div class="cards-grid">
-  <!-- Recent Players -->
-  <div class="list-card">
-    <div class="header">
-      <h2>Your Recent Players</h2>
-      <button class="see-all">See all</button>
-    </div>
-    <div class="player-list">
-      <div class="list-header">
-        <span>Grade</span>
-        <span>Age</span>
-        <span>Name</span>
-        <span>Rating</span>
-        <span>Division</span>
-      </div>
-      <div class="player-row" *ngFor="let player of recentPlayers">
-        <span>{{player.grade}}</span>
-        <span>{{player.age}}</span>
-        <span class="name">{{player.name}}</span>
-        <span class="rating">{{player.rating}}</span>
-        <span>{{player.lastYearDivision || '-'}}</span>
-      </div>
-    </div>
-  </div>
-
+  
   <!-- Top 3rd Graders -->
   <div class="list-card">
     <div class="header">
@@ -31,14 +8,15 @@
     </div>
     <div class="player-list">
       <div class="list-header">
-        <span>Age</span>
         <span>Name</span>
-        <span>Rating</span>
+        <span>Details</span>
       </div>
       <div class="player-row" *ngFor="let player of thirdGradePlayers">
-        <span>{{player.age}}</span>
         <span class="name">{{player.name}}</span>
-        <span class="rating">{{player.rating}}</span>
+        <div class="player-metadata">
+          <span class="tag">{{player.age}} yrs</span>
+          <span class="tag">{{player.rating}}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -51,15 +29,53 @@
     </div>
     <div class="player-list">
       <div class="list-header">
-        <span>Age</span>
         <span>Name</span>
-        <span>Rating</span>
+        <span>Details</span>
       </div>
       <div class="player-row" *ngFor="let player of secondGradePlayers">
-        <span>{{player.age}}</span>
         <span class="name">{{player.name}}</span>
-        <span class="rating">{{player.rating}}</span>
+        <div class="player-metadata">
+          <span class="tag">{{player.age}} yrs</span>
+          <span class="tag">{{player.rating}}</span>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Team CDK Picks -->
+  <div class="list-card">
+    <div class="header">
+      <h2>Team CDK - Picks</h2>
+      <button class="see-all">See all</button>
+    </div>
+    <div class="player-list">
+      <div class="list-header">
+        <span>No.</span>
+        <span>Name</span>
+        
+      </div>
+      <div class="player-row" *ngFor="let player of recentPlayers; let i = index">
+        <div class="pick-number">
+          <input type="number" [value]="i + 1" class="pick-input" (change)="updatePickOrder(player, $event)">
+        </div>
+        <div class="player-details">
+          <div class="name-section">
+            <input type="text" [value]="player.name" class="name-input" (change)="updatePlayerName(player, $event)">
+          </div>
+          <div class="player-metadata">
+            <span class="tag">{{player.age}} yrs</span>
+            <span class="tag">{{player.grade}}</span>
+            <span class="tag" *ngIf="player.lastYearDivision">{{player.lastYearDivision}}</span>
+            <ng-container *ngFor="let comment of player.comments">
+              <span class="tag">{{comment}}</span>
+            </ng-container>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="delete-btn" (click)="removePlayer(player)" title="Remove player">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>

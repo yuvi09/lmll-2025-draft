@@ -1,20 +1,21 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { PlayerService, Player } from '../services/player.service';
+
+interface ExtendedPlayer extends Player {
+  comments: string[];
+}
 
 @Component({
   selector: 'app-player-list',
   standalone: true,
-  imports: [
-    CommonModule
-  ],
+  imports: [CommonModule],
   providers: [PlayerService],
   templateUrl: './player-list.component.html',
   styleUrls: ['./player-list.component.scss']
 })
 export class PlayerListComponent implements OnInit {
-  recentPlayers: Player[] = [];
+  recentPlayers: ExtendedPlayer[] = [];
   thirdGradePlayers: Player[] = [];
   secondGradePlayers: Player[] = [];
   error: string | null = null;
@@ -24,8 +25,10 @@ export class PlayerListComponent implements OnInit {
   ngOnInit() {
     this.playerService.getRecentPlayers().subscribe({
       next: (players) => {
-        console.log('Recent players loaded:', players);
-        this.recentPlayers = players;
+        this.recentPlayers = players.map(p => ({
+          ...p,
+          comments: (p.Comments || '').split(',').map(c => c.trim()).filter(c => c)
+        }));
       },
       error: (error) => {
         console.error('Error loading recent players:', error);
@@ -54,5 +57,23 @@ export class PlayerListComponent implements OnInit {
         this.error = 'Failed to load players';
       }
     });
+  }
+
+  updatePickOrder(player: ExtendedPlayer, event: Event) {
+    const newOrder = (event.target as HTMLInputElement).value;
+    // Implement pick order update logic
+  }
+
+  updatePlayerName(player: ExtendedPlayer, event: Event) {
+    const newName = (event.target as HTMLInputElement).value;
+    // Implement name update logic
+  }
+
+  editPlayer(player: ExtendedPlayer) {
+    // Implement edit modal/form logic
+  }
+
+  removePlayer(player: ExtendedPlayer) {
+    // Implement remove player logic
   }
 }

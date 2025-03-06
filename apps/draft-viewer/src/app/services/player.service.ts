@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 
 export interface RawPlayer {
   Grd: string;
@@ -24,6 +24,7 @@ export interface Player {
   rating: number;
   lastYearDivision: string | null;
   positions: string[];
+  Comments: string | null;
 }
 
 @Injectable({
@@ -33,21 +34,26 @@ export class PlayerService {
   constructor(private http: HttpClient) {}
 
   getPlayers(): Observable<Player[]> {
+    console.log('Attempting to load players from:', '/assets/data/player_ratings.json');
     return this.http.get<RawPlayer[]>('/assets/data/player_ratings.json').pipe(
-      map(players => players.map(p => ({
-        grade: p.Grd,
-        name: p.Name,
-        age: p.Age,
-        rating: parseFloat(p.Ratg),
-        lastYearDivision: p["PY Division"],
-        positions: p.Pos ? p.Pos.split(',') : []
-      })))
+      tap(data => console.log('Received player data:', data)),
+      map(players => players
+        .filter(p => p.Name !== null) // Filter out null entries
+        .map(p => ({
+          grade: p.Grd,
+          name: p.Name,
+          age: p.Age,
+          rating: parseFloat(p.Ratg),
+          lastYearDivision: p["PY Division"],
+          positions: p.Pos ? p.Pos.split(',') : [],
+          Comments: p.Comments
+        })))
     );
   }
 
   getRecentPlayers(): Observable<Player[]> {
     return this.getPlayers().pipe(
-      map(players => players.slice(0, 5))
+      map(players => players.slice(0, 12))
     );
   }
 
