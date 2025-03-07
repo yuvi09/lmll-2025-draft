@@ -80,6 +80,7 @@ const clearDatabase = () => {
       db.run('DROP TABLE IF EXISTS teams');
       db.run('DROP TABLE IF EXISTS players');
       db.run('DROP TABLE IF EXISTS draft_state');
+      db.run('DROP TABLE IF EXISTS pick_order');
       resolve();
     });
   });
@@ -180,6 +181,29 @@ db.serialize(() => {
             db.get('SELECT * FROM draft_state WHERE id = 1', [], (err, row) => {
               if (!row) {
                 db.run('INSERT INTO draft_state (id, current_round, current_pick_index) VALUES (1, 1, 0)');
+              }
+            });
+
+            // Add this to the database initialization section
+            db.run(`
+              CREATE TABLE IF NOT EXISTS pick_order (
+                pick_number INTEGER PRIMARY KEY,
+                team_number INTEGER NOT NULL,
+                FOREIGN KEY (team_number) REFERENCES teams (team_number)
+              )
+            `);
+
+            // Initialize pick order if not exists
+            const pickOrderData = [
+              [1, 11], [2, 6], [3, 4], [4, 5], [5, 8], [6, 3], [7, 1],
+              [8, 9], [9, 10], [10, 12], [11, 13], [12, 2], [13, 7]
+            ];
+
+            db.get('SELECT COUNT(*) as count FROM pick_order', [], (err, row: any) => {
+              if (err || row.count === 0) {
+                const stmt = db.prepare('INSERT INTO pick_order (pick_number, team_number) VALUES (?, ?)');
+                pickOrderData.forEach(([pick, team]) => stmt.run(pick, team));
+                stmt.finalize();
               }
             });
 
@@ -492,6 +516,22 @@ app.put('/draft-state', (req, res) => {
       res.json({ current_round, current_pick_index });
     }
   );
+});
+
+// Add new API endpoint to get pick order
+app.get('/pick-order', (req, res) => {
+  db.all(`
+    SELECT 
+      po.pick_number,
+      po.team_number,
+      t.managers
+    FROM pick_order po
+    JOIN teams t ON po.team_number = t.team_number
+    ORDER BY po.pick_number
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
 // Start the Express server

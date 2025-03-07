@@ -45,6 +45,12 @@ export interface DraftState {
   current_pick_index: number;
 }
 
+export interface PickOrder {
+  pick_number: number;
+  team_number: number;
+  managers: string;
+}
+
 // Player API calls
 export const getPlayers = async (): Promise<Player[]> => {
   const response = await axios.get(`${API_URL}/players`);
@@ -99,5 +105,10 @@ export const getDraftState = async (): Promise<DraftState> => {
 
 export const updateDraftState = async (state: DraftState): Promise<DraftState> => {
   const response = await axios.put(`${API_URL}/draft-state`, state);
+  return response.data;
+};
+
+export const getPickOrder = async (): Promise<PickOrder[]> => {
+  const response = await axios.get(`${API_URL}/pick-order`);
   return response.data;
 }; 

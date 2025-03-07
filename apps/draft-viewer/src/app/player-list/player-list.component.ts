@@ -88,14 +88,16 @@ export class PlayerListComponent implements OnInit {
   }
 
   get currentPickTeam(): string {
-    return this.currentPickIndex < this.draftOrder.length 
-      ? `Team ${this.draftOrder[this.currentPickIndex].teamNumber}`
+    const roundOrder = this.getCurrentRoundPickOrder();
+    return this.currentPickIndex < roundOrder.length 
+      ? `Team ${roundOrder[this.currentPickIndex].teamNumber}`
       : 'Draft Complete';
   }
 
   get currentTeamManagers(): string {
-    return this.currentPickIndex < this.draftOrder.length 
-      ? this.draftOrder[this.currentPickIndex].managers
+    const roundOrder = this.getCurrentRoundPickOrder();
+    return this.currentPickIndex < roundOrder.length 
+      ? roundOrder[this.currentPickIndex].managers
       : '';
   }
   
@@ -131,16 +133,21 @@ export class PlayerListComponent implements OnInit {
   async fetchTeams() {
     try {
       this.loading.teams = true;
-      this.teams = await ApiService.getTeams();
       
-      // Create draftOrder from teams data
-      this.draftOrder = this.teams
-        .sort((a, b) => a.team_number - b.team_number)
-        .map(team => ({
-          pickNumber: team.team_number,
-          teamNumber: team.team_number,
-          managers: team.managers
-        }));
+      // Fetch teams and pick order in parallel
+      const [teams, pickOrder] = await Promise.all([
+        ApiService.getTeams(),
+        ApiService.getPickOrder()
+      ]);
+      
+      this.teams = teams;
+      
+      // Create draftOrder from database pick order
+      this.draftOrder = pickOrder.map(order => ({
+        pickNumber: order.pick_number,
+        teamNumber: order.team_number,
+        managers: order.managers
+      }));
         
     } catch (err) {
       this.error.teams = 'Failed to load teams';
@@ -182,7 +189,9 @@ export class PlayerListComponent implements OnInit {
     if (!this.selectedPlayer) return;
 
     try {
-      const currentTeam = this.draftOrder[this.currentPickIndex];
+      const roundOrder = this.getCurrentRoundPickOrder();
+      const currentTeam = roundOrder[this.currentPickIndex];
+      
       console.log('Submitting pick:', {
         playerId: this.selectedPlayer,
         teamNumber: currentTeam.teamNumber,
@@ -208,7 +217,7 @@ export class PlayerListComponent implements OnInit {
 
       // Move to next pick
       this.currentPickIndex++;
-      if (this.currentPickIndex >= 13) {
+      if (this.currentPickIndex >= roundOrder.length) {
         this.currentPickIndex = 0;
         this.currentRound++;
       }
@@ -359,26 +368,30 @@ export class PlayerListComponent implements OnInit {
   }
 
   get nextPickTeam(): string {
+    const roundOrder = this.getCurrentRoundPickOrder();
     const nextIndex = this.currentPickIndex + 1;
-    if (nextIndex >= this.draftOrder.length) {
+    if (nextIndex >= roundOrder.length) {
       return 'Round Complete';
     }
-    return `Team ${this.draftOrder[nextIndex].teamNumber}`;
+    return `Team ${roundOrder[nextIndex].teamNumber}`;
   }
 
   get nextTeamManagers(): string {
+    const roundOrder = this.getCurrentRoundPickOrder();
     const nextIndex = this.currentPickIndex + 1;
-    if (nextIndex >= this.draftOrder.length) {
+    if (nextIndex >= roundOrder.length) {
       return '';
     }
-    return this.draftOrder[nextIndex].managers;
+    return roundOrder[nextIndex].managers;
   }
 
   async skipPick() {
     try {
+      const roundOrder = this.getCurrentRoundPickOrder();
+      
       // Move to next pick
       this.currentPickIndex++;
-      if (this.currentPickIndex >= this.draftOrder.length) {
+      if (this.currentPickIndex >= roundOrder.length) {
         this.currentPickIndex = 0;
         this.currentRound++;
       }
@@ -395,5 +408,13 @@ export class PlayerListComponent implements OnInit {
     } catch (err) {
       console.error('Error skipping pick:', err);
     }
+  }
+
+  // Add this helper method to get the current round's pick order
+  getCurrentRoundPickOrder(): DraftTeam[] {
+    // If even round number, reverse the order
+    return this.currentRound % 2 === 0 
+      ? [...this.draftOrder].reverse()
+      : this.draftOrder;
   }
 }
