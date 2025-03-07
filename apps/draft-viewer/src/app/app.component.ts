@@ -1,19 +1,18 @@
 import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { PlayerListComponent } from './player-list/player-list.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterModule, CommonModule],
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatAutocompleteModule,
+    PlayerListComponent
+  ],
+  template: '<app-player-list></app-player-list>'
 })
-export class AppComponent {
-  currentPage = 'Top Picks';
-  isNavCollapsed = false;
-
-  toggleNav() {
-    this.isNavCollapsed = !this.isNavCollapsed;
-  }
-}
+export class AppComponent {}

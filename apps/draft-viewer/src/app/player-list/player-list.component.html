@@ -1,126 +1,141 @@
-<div class="cards-grid">
+<div class="dashboard-layout">
+  <!-- Top Row -->
+  <div class="top-row">
+    <div class="card">
+    
 
-    <!-- Add Pick Card -->
-  <div class="list-card add-pick-card">
-    <div class="header">
-      <h2>Add Pick</h2>
-    </div>
-    <div class="add-pick-form">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Team No.</label>
-          <input type="number" [(ngModel)]="newPick.teamNo" class="form-input">
-        </div>
-        <div class="form-group">
-          <label>Grade</label>
-          <select [(ngModel)]="newPick.grade" class="form-input">
-            <option value="2nd">2nd</option>
-            <option value="3rd">3rd</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Draft #</label>
-          <input type="number" [(ngModel)]="newPick.draftNo" class="form-input">
-        </div>
-        <div class="form-group name-group">
-          <label>Name</label>
-          <input type="text" 
-                 [(ngModel)]="newPick.name" 
-                 (input)="onNameSearch($event)"
-                 class="form-input"
-                 [matAutocomplete]="auto">
-        </div>
-        <div class="form-group button-group">
-          <label>&nbsp;</label> <!-- Empty label to align with other inputs -->
-          <button class="add-btn" (click)="addPick()">Add Pick</button>
-        </div>
+      <!-- Add Pick Card -->
+    <div class="card add-pick-card">
+      <div class="card-header">
+        <h2>Add Pick</h2>
       </div>
-      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onPlayerSelected($event)">
-        <mat-option *ngFor="let player of filteredPlayers" [value]="player.name">
-          {{player.name}} ({{player.grade}})
-        </mat-option>
-      </mat-autocomplete>
-    </div>
-  </div>
-  
-  <!-- Top 3rd Graders -->
-  <div class="list-card">
-    <div class="header">
-      <h2>Top 3rd Grade Players</h2>
-      <button class="see-all">See all</button>
-    </div>
-    <div class="player-list">
-      <div class="list-header">
-        <span>Name</span>
-        <span>Details</span>
-      </div>
-      <div class="player-row" *ngFor="let player of thirdGradePlayers">
-        <span class="name">{{player.name}}</span>
-        <div class="player-metadata">
-          <span class="tag">{{player.age}} yrs</span>
-          <span class="tag">{{player.rating}}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Top 2nd Graders -->
-  <div class="list-card">
-    <div class="header">
-      <h2>Top 2nd Grade Players</h2>
-      <button class="see-all">See all</button>
-    </div>
-    <div class="player-list">
-      <div class="list-header">
-        <span>Name</span>
-        <span>Details</span>
-      </div>
-      <div class="player-row" *ngFor="let player of secondGradePlayers">
-        <span class="name">{{player.name}}</span>
-        <div class="player-metadata">
-          <span class="tag">{{player.age}} yrs</span>
-          <span class="tag">{{player.rating}}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Team CDK Picks -->
-  <div class="list-card">
-    <div class="header">
-      <h2>Team CDK - Picks</h2>
-      <button class="see-all">See all</button>
-    </div>
-    <div class="player-list">
-      <div class="list-header">
-        <span>No.</span>
-        <span>Name</span>
+      <div class="card-body">
+        <div *ngIf="error.addPick" class="error">{{ error.addPick }}</div>
         
-      </div>
-      <div class="player-row" *ngFor="let player of recentPlayers; let i = index">
-        <div class="pick-number">
-          <input type="number" [value]="i + 1" class="pick-input" (change)="updatePickOrder(player, $event)">
-        </div>
-        <div class="player-details">
-          <div class="name-section">
-            <input type="text" [value]="player.name" class="name-input" (change)="updatePlayerName(player, $event)">
+        <form (submit)="submitPick()" class="add-pick-form">
+          <div class="form-row">
+            <div class="form-group search-group">
+              <label for="playerSearch">Enter Pick</label>
+              <input
+                type="text"
+                id="playerSearch"
+                name="playerSearch"
+                [(ngModel)]="playerSearch"
+                (input)="onPlayerSearchInput($event)"
+                [matAutocomplete]="auto"
+                class="search-input"
+                placeholder="Start typing a name..."
+              >
+              <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onPlayerSelected($event)">
+                <mat-option *ngFor="let player of filteredPlayers" [value]="player.name">
+                  <div class="player-option">
+                    <span class="name">{{player.name}}</span>
+                    <span class="details">
+                      Grade: {{player.grade}} | Overall: {{player.overall}}
+                      <span *ngIf="player.position">, {{player.position}}</span>
+                    </span>
+                  </div>
+                </mat-option>
+              </mat-autocomplete>
+            </div>
+            
+            <!-- Simplified Team Selection -->
+            <div class="form-group pick-order">
+              <div class="pick-info">
+                <span class="pick-number">Pick #{{currentPickNumber}}</span>
+                <span class="team-name">{{currentPickTeam}}</span>
+              </div>
+              <div class="team-managers">{{currentTeamManagers}}</div>
+            </div>
+            
+            <div class="form-group button-group">
+              <button type="submit" [disabled]="!selectedPlayer" class="add-btn">
+                Confirm Pick
+              </button>
+            </div>
           </div>
+        </form>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="cards-grid">
+    
+
+    <!-- Top 3rd Grade Players Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Top 3rd Grade Players</h2>
+        <button class="see-all">See all</button>
+      </div>
+      <div class="player-list">
+        <div class="list-header">
+          <span>Name</span>
+          <span>Details</span>
+        </div>
+        <div class="player-row" *ngFor="let player of thirdGradePlayers">
+          <span class="name">{{player.name}}</span>
           <div class="player-metadata">
             <span class="tag">{{player.age}} yrs</span>
-            <span class="tag">{{player.grade}}</span>
-            <span class="tag" *ngIf="player.lastYearDivision">{{player.lastYearDivision}}</span>
-            <ng-container *ngFor="let comment of player.comments">
-              <span class="tag">{{comment}}</span>
-            </ng-container>
+            <span class="tag">{{player.rating}}</span>
           </div>
-        </div>
-        <div class="actions">
-          <button class="delete-btn" (click)="removePlayer(player)" title="Remove player">×</button>
         </div>
       </div>
     </div>
+
+    <!-- Top 2nd Grade Players Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Top 2nd Grade Players</h2>
+        <button class="see-all">See all</button>
+      </div>
+      <div class="player-list">
+        <div class="list-header">
+          <span>Name</span>
+          <span>Details</span>
+        </div>
+        <div class="player-row" *ngFor="let player of secondGradePlayers">
+          <span class="name">{{player.name}}</span>
+          <div class="player-metadata">
+            <span class="tag">{{player.age}} yrs</span>
+            <span class="tag">{{player.rating}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team CDK - Picks Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Team CDK - Picks</h2>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading.picks">Loading...</div>
+        <div *ngIf="error.picks" class="error">{{ error.picks }}</div>
+        <table *ngIf="!loading.picks && !error.picks">
+          <thead>
+            <tr>
+              <th>Round</th>
+              <th>Player</th>
+              <th>Grade</th>
+              <th>Rating</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pick of cdkPicks">
+              <td>{{ pick.round }}</td>
+              <td>{{ pick.player_name }}</td>
+              <td>{{ pick.grade }}</td>
+              <td>{{ pick.overall }}</td>
+            </tr>
+            <tr *ngIf="cdkPicks.length === 0">
+              <td colspan="4" class="text-center">No picks yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
-
-  
-
 </div>
