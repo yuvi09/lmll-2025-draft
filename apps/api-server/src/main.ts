@@ -21,10 +21,21 @@ const db = new Database(DB_PATH);
 app.use(cors());
 app.use(express.json()); // Allows JSON request bodies
 
-// Add this interface at the top of the file
+// Add these interfaces at the top of the file
 interface ColumnInfo {
   name: string;
   type: string;
+}
+
+interface Team {
+  id: number;
+  team_number: number;
+  name: string;
+  managers: string;
+}
+
+interface DbTeam {
+  id: number;
 }
 
 // Add interface for the JSON data structure
@@ -42,6 +53,23 @@ interface PlayerRating {
   Pos?: string;
   Comments?: string;
 }
+
+// Move teams array to the top level scope
+const teams = [
+  [11, 'Team 11', 'DeSimone, Pasqua, Seeman'],
+  [6, 'Team 6', 'Candela, Dodia, Kuker'],
+  [4, 'Team 4', 'Green, McGrath, Schumaker'],
+  [5, 'Team 5', 'Centre, Faranda, Helfst'],
+  [8, 'Team 8', 'Drummond, Griffel, Oleson'],
+  [3, 'Team 3', 'Felder, Sigel, Staub'],
+  [1, 'Team 1', 'Almodovar, Billig, Krafft'],
+  [9, 'Team 9', 'Corritori, Lederman, Lewis'],
+  [10, 'Team 10', 'Binder, List, Verrelli'],
+  [12, 'Team 12', 'Flahive, Gianutsos, Zalon'],
+  [13, 'Team 13', 'Spinelli, Koizim'],
+  [2, 'Team 2', 'Gedney, Kohlasch, Paonessa'],
+  [7, 'Team 7', 'Diskin, Fitzpatrick']
+] as const;
 
 // Add this function after database initialization
 const clearDatabase = () => {
@@ -93,6 +121,29 @@ db.serialize(() => {
       const addColumns = () => {
         return new Promise<void>((resolve, reject) => {
           db.serialize(() => {
+            // First create teams table
+            db.run(`
+              CREATE TABLE IF NOT EXISTS teams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_number INTEGER NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                managers TEXT NOT NULL
+              )
+            `);
+
+            // Then add the teams data
+            const stmt = db.prepare(`
+              INSERT OR IGNORE INTO teams (team_number, name, managers)
+              VALUES (?, ?, ?)
+            `);
+
+            teams.forEach(([number, name, managers]) => {
+              stmt.run(number, name, managers);
+            });
+
+            stmt.finalize();
+
+            // Then add columns to players table if needed
             if (!columnInfo.some(row => row.name === 'overall')) {
               db.run('ALTER TABLE players ADD COLUMN overall INTEGER');
             }
@@ -114,6 +165,7 @@ db.serialize(() => {
             if (!columnInfo.some(row => row.name === 'notes')) {
               db.run('ALTER TABLE players ADD COLUMN notes TEXT');
             }
+
             resolve();
           });
         });
@@ -122,14 +174,7 @@ db.serialize(() => {
       // Execute the column additions and then continue with seeding
       addColumns().then(() => {
         console.log('Finished adding columns');
-        // Teams table to track available teams (numbered 1 through N)
-        db.run(`
-          CREATE TABLE IF NOT EXISTS teams (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            team_number INTEGER NOT NULL UNIQUE
-          )
-        `);
-
+        
         // Draft picks table with round information
         db.run(`
           CREATE TABLE IF NOT EXISTS picks (
@@ -223,21 +268,11 @@ db.serialize(() => {
               
               stmt.finalize();
               
-              // Update the teams seeding code
-              const NUMBER_OF_TEAMS = 8; // Or however many teams you need
-              const teamStmt = db.prepare('INSERT INTO teams (team_number) VALUES (?)');
-              
-              for (let i = 1; i <= NUMBER_OF_TEAMS; i++) {
-                teamStmt.run(i);
-              }
-              
-              teamStmt.finalize();
-              
               db.run('COMMIT', [], (err) => {
                 if (err) {
                   console.error('Error committing transaction:', err.message);
                 } else {
-                  console.log(`Database seeded with ${playerData.length} players and ${NUMBER_OF_TEAMS} teams`);
+                  console.log(`Database seeded with ${playerData.length} players and ${teams.length} teams`);
                 }
               });
             } catch (error) {
@@ -282,18 +317,29 @@ app.get('/players/top/:grade/:limit', (req, res) => {
   });
 });
 
-// API: Get all teams
+// API: Get all teams (updated to include all fields)
 app.get('/teams', (req, res) => {
-  db.all('SELECT * FROM teams', [], (err, rows) => {
+  db.all(`
+    SELECT id, team_number, name, managers 
+    FROM teams 
+    ORDER BY team_number
+  `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
-// API: Get all draft picks with player and team info
+// API: Get all draft picks (updated to include team name and managers)
 app.get('/picks', (req, res) => {
   db.all(`
-    SELECT p.*, pl.name as player_name, pl.grade, pl.overall, t.team_number as team_number
+    SELECT 
+      p.*,
+      pl.name as player_name,
+      pl.grade,
+      pl.overall,
+      t.team_number,
+      t.name as team_name,
+      t.managers as team_managers
     FROM picks p
     JOIN players pl ON p.player_id = pl.id
     JOIN teams t ON p.team_id = t.id
@@ -304,14 +350,21 @@ app.get('/picks', (req, res) => {
   });
 });
 
-// API: Get picks for a specific team
+// API: Get picks for a specific team (updated to include team details)
 app.get('/picks/team/:teamNumber', (req, res) => {
   const teamNumber = req.params.teamNumber;
   db.all(`
-    SELECT p.*, pl.name as player_name, pl.grade, pl.overall
+    SELECT 
+      p.*,
+      pl.name as player_name,
+      pl.grade,
+      pl.overall,
+      t.name as team_name,
+      t.managers as team_managers
     FROM picks p
     JOIN players pl ON p.player_id = pl.id
-    WHERE p.team_id = ?
+    JOIN teams t ON p.team_id = t.id
+    WHERE t.team_number = ?
     ORDER BY p.round
   `, [teamNumber], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -319,40 +372,55 @@ app.get('/picks/team/:teamNumber', (req, res) => {
   });
 });
 
-// API: Add a new pick
+// API: Add a new pick (updated to use team_number for lookup)
 app.post('/picks', (req, res) => {
   const { player_id, team_number, round, pick_number } = req.body;
   
-  // First check if player is already drafted
-  db.get('SELECT id FROM picks WHERE player_id = ?', [player_id], (err, row) => {
+  // Add type assertion for team
+  db.get<DbTeam>('SELECT id FROM teams WHERE team_number = ?', [team_number], (err, team) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (row) return res.status(400).json({ error: 'Player already drafted' });
+    if (!team) return res.status(400).json({ error: 'Team not found' });
     
-    // Then check if team already has a pick in this round
-    db.get('SELECT id FROM picks WHERE team_id = ? AND round = ?', [team_number, round], (err, row) => {
+    const team_id = team.id;
+    
+    // Check if player is already drafted
+    db.get('SELECT id FROM picks WHERE player_id = ?', [player_id], (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (row) return res.status(400).json({ error: 'Team already has a pick in this round' });
+      if (row) return res.status(400).json({ error: 'Player already drafted' });
       
-      // If all checks pass, insert the pick
-      db.run(
-        `INSERT INTO picks (player_id, team_id, round, pick_number) VALUES (?, ?, ?, ?)`,
-        [player_id, team_number, round, pick_number],
-        function (err) {
-          if (err) return res.status(500).json({ error: err.message });
-          
-          // Return the new pick with player and team info
-          db.get(`
-            SELECT p.*, pl.name as player_name, pl.grade, pl.overall, t.team_number as team_number
-            FROM picks p
-            JOIN players pl ON p.player_id = pl.id
-            JOIN teams t ON p.team_id = t.id
-            WHERE p.id = ?
-          `, [this.lastID], (err, row) => {
+      // Check if team already has a pick in this round
+      db.get('SELECT id FROM picks WHERE team_id = ? AND round = ?', [team_id, round], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (row) return res.status(400).json({ error: 'Team already has a pick in this round' });
+        
+        // If all checks pass, insert the pick
+        db.run(
+          `INSERT INTO picks (player_id, team_id, round, pick_number) VALUES (?, ?, ?, ?)`,
+          [player_id, team_id, round, pick_number],
+          function (err) {
             if (err) return res.status(500).json({ error: err.message });
-            res.json(row);
-          });
-        }
-      );
+            
+            // Return the new pick with all details
+            db.get(`
+              SELECT 
+                p.*,
+                pl.name as player_name,
+                pl.grade,
+                pl.overall,
+                t.team_number,
+                t.name as team_name,
+                t.managers as team_managers
+              FROM picks p
+              JOIN players pl ON p.player_id = pl.id
+              JOIN teams t ON p.team_id = t.id
+              WHERE p.id = ?
+            `, [this.lastID], (err, row) => {
+              if (err) return res.status(500).json({ error: err.message });
+              res.json(row);
+            });
+          }
+        );
+      });
     });
   });
 });

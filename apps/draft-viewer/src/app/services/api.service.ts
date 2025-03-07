@@ -20,7 +20,9 @@ export interface Player {
 
 export interface Team {
   id: number;
+  team_number: number;
   name: string;
+  managers: string;
 }
 
 export interface Pick {
@@ -33,7 +35,9 @@ export interface Pick {
   player_name: string;
   grade: number;
   overall: number;
+  team_number: number;
   team_name: string;
+  team_managers: string;
 }
 
 // Player API calls

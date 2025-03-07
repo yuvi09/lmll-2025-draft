@@ -398,9 +398,20 @@
 
   .pick-info {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
     margin-bottom: 4px;
+
+    .round-indicator {
+      display: inline-flex;
+      align-items: center;
+      background: #0f172a;  // Darker blue/slate color
+      color: white;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 500;
+    }
 
     .pick-number {
       font-weight: 600;
@@ -415,5 +426,6 @@
   .team-managers {
     font-size: 13px;
     color: #64748b;
+    margin-top: 4px;
   }
 }
