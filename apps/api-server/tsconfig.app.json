@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/api-server",
+    "module": "commonjs",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "composite": true,
+    "declaration": true,
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"]
+}
