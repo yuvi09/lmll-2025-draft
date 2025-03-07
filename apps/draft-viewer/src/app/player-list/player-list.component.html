@@ -63,80 +63,147 @@
   </div>
 
   <!-- Bottom Row -->
-  <div class="cards-grid">
-    
-
-    <!-- Top 3rd Grade Players Card -->
-    <div class="card">
-      <div class="card-header">
-        <h2>Top 3rd Grade Players</h2>
-        <button class="see-all">See all</button>
-      </div>
-      <div class="player-list">
-        <div class="list-header">
-          <span>Name</span>
-          <span>Details</span>
+  <div class="dashboard-content">
+    <!-- Keep existing cards row -->
+    <div class="cards-grid">
+      <!-- Top 3rd Grade Players Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Top 3rd Grade Players</h2>
+          <button class="see-all">See all</button>
         </div>
-        <div class="player-row" *ngFor="let player of thirdGradePlayers">
-          <span class="name">{{player.name}}</span>
-          <div class="player-metadata">
-            <span class="tag">{{player.age}} yrs</span>
-            <span class="tag">{{player.rating}}</span>
+        <div class="player-list">
+          <div class="list-header">
+            <span>Name</span>
+            <span>Details</span>
           </div>
+          <div class="player-row" *ngFor="let player of thirdGradePlayers">
+            <span class="name">{{player.name}}</span>
+            <div class="player-metadata">
+              <span class="tag">{{player.age}} yrs</span>
+              <span class="tag">{{player.rating}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 2nd Grade Players Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Top 2nd Grade Players</h2>
+          <button class="see-all">See all</button>
+        </div>
+        <div class="player-list">
+          <div class="list-header">
+            <span>Name</span>
+            <span>Details</span>
+          </div>
+          <div class="player-row" *ngFor="let player of secondGradePlayers">
+            <span class="name">{{player.name}}</span>
+            <div class="player-metadata">
+              <span class="tag">{{player.age}} yrs</span>
+              <span class="tag">{{player.rating}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team CDK - Picks Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Team CDK - Picks</h2>
+        </div>
+        <div class="card-body">
+          <div *ngIf="loading.picks">Loading...</div>
+          <div *ngIf="error.picks" class="error">{{ error.picks }}</div>
+          <table *ngIf="!loading.picks && !error.picks">
+            <thead>
+              <tr>
+                <th>Round</th>
+                <th>Player</th>
+                <th>Grade</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pick of cdkPicks">
+                <td>{{ pick.round }}</td>
+                <td>{{ pick.player_name }}</td>
+                <td>{{ pick.grade }}</td>
+                <td>{{ pick.overall }}</td>
+              </tr>
+              <tr *ngIf="cdkPicks.length === 0">
+                <td colspan="4" class="text-center">No picks yet</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <!-- Top 2nd Grade Players Card -->
-    <div class="card">
-      <div class="card-header">
-        <h2>Top 2nd Grade Players</h2>
-        <button class="see-all">See all</button>
-      </div>
-      <div class="player-list">
-        <div class="list-header">
-          <span>Name</span>
-          <span>Details</span>
+    <!-- First Row of Teams -->
+    <div class="teams-grid">
+      <div class="card team-card" *ngFor="let team of firstRowTeams">
+        <div class="card-header">
+          <h2>Team {{team.team_number}} - Picks</h2>
+          <div class="managers">{{team.managers}}</div>
         </div>
-        <div class="player-row" *ngFor="let player of secondGradePlayers">
-          <span class="name">{{player.name}}</span>
-          <div class="player-metadata">
-            <span class="tag">{{player.age}} yrs</span>
-            <span class="tag">{{player.rating}}</span>
-          </div>
+        <div class="card-body">
+          <table *ngIf="!loading.picks">
+            <thead>
+              <tr>
+                <th>Round</th>
+                <th>Player</th>
+                <th>Grade</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pick of getTeamPicks(team.team_number)">
+                <td>{{ pick.round }}</td>
+                <td>{{ pick.player_name }}</td>
+                <td>{{ pick.grade }}</td>
+                <td>{{ pick.overall }}</td>
+              </tr>
+              <tr *ngIf="getTeamPicks(team.team_number).length === 0">
+                <td colspan="4" class="text-center">No picks yet</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <!-- Team CDK - Picks Card -->
-    <div class="card">
-      <div class="card-header">
-        <h2>Team CDK - Picks</h2>
-      </div>
-      <div class="card-body">
-        <div *ngIf="loading.picks">Loading...</div>
-        <div *ngIf="error.picks" class="error">{{ error.picks }}</div>
-        <table *ngIf="!loading.picks && !error.picks">
-          <thead>
-            <tr>
-              <th>Round</th>
-              <th>Player</th>
-              <th>Grade</th>
-              <th>Rating</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let pick of cdkPicks">
-              <td>{{ pick.round }}</td>
-              <td>{{ pick.player_name }}</td>
-              <td>{{ pick.grade }}</td>
-              <td>{{ pick.overall }}</td>
-            </tr>
-            <tr *ngIf="cdkPicks.length === 0">
-              <td colspan="4" class="text-center">No picks yet</td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Second Row of Teams -->
+    <div class="teams-grid">
+      <div class="card team-card" *ngFor="let team of secondRowTeams">
+        <div class="card-header">
+          <h2>Team {{team.team_number}} - Picks</h2>
+          <div class="managers">{{team.managers}}</div>
+        </div>
+        <div class="card-body">
+          <table *ngIf="!loading.picks">
+            <thead>
+              <tr>
+                <th>Round</th>
+                <th>Player</th>
+                <th>Grade</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pick of getTeamPicks(team.team_number)">
+                <td>{{ pick.round }}</td>
+                <td>{{ pick.player_name }}</td>
+                <td>{{ pick.grade }}</td>
+                <td>{{ pick.overall }}</td>
+              </tr>
+              <tr *ngIf="getTeamPicks(team.team_number).length === 0">
+                <td colspan="4" class="text-center">No picks yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

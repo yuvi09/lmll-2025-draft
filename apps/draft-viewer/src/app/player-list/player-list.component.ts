@@ -81,6 +81,10 @@ export class PlayerListComponent implements OnInit {
   currentRound: number = 1;
   currentPickIndex: number = 0;
 
+  firstRowTeams: ApiService.Team[] = [];
+  secondRowTeams: ApiService.Team[] = [];
+  cdkTeam?: ApiService.Team;
+
   get currentPickNumber(): number {
     return this.currentRound === 1 
       ? this.currentPickIndex + 1 
@@ -99,6 +103,7 @@ export class PlayerListComponent implements OnInit {
 
   async ngOnInit() {
     await this.fetchAllData();
+    this.organizeTeams();
   }
   
   async fetchAllData() {
@@ -268,5 +273,26 @@ export class PlayerListComponent implements OnInit {
         name: ''
       };
     }
+  }
+
+  organizeTeams() {
+    // First row: Teams 11, 4, 5, 8, 3, 1
+    const firstRowNumbers = [11, 4, 5, 8, 3, 1];
+    this.firstRowTeams = this.teams
+      .filter(team => firstRowNumbers.includes(team.team_number))
+      .sort((a, b) => firstRowNumbers.indexOf(a.team_number) - firstRowNumbers.indexOf(b.team_number));
+
+    // Second row: Teams 9, 10, 12, 13, 2, 7
+    const secondRowNumbers = [9, 10, 12, 13, 2, 7];
+    this.secondRowTeams = this.teams
+      .filter(team => secondRowNumbers.includes(team.team_number))
+      .sort((a, b) => secondRowNumbers.indexOf(a.team_number) - secondRowNumbers.indexOf(b.team_number));
+
+    // CDK Team (Team 6)
+    this.cdkTeam = this.teams.find(team => team.team_number === 6);
+  }
+
+  getTeamPicks(teamNumber: number): ApiService.Pick[] {
+    return this.picks.filter(pick => pick.team_number === teamNumber);
   }
 }
