@@ -40,6 +40,11 @@ export interface Pick {
   team_managers: string;
 }
 
+export interface DraftState {
+  current_round: number;
+  current_pick_index: number;
+}
+
 // Player API calls
 export const getPlayers = async (): Promise<Player[]> => {
   const response = await axios.get(`${API_URL}/players`);
@@ -70,15 +75,29 @@ export const getTeamPicks = async (teamId: number): Promise<Pick[]> => {
 
 export const addPick = async (
   playerId: number, 
-  teamId: number, 
+  teamNumber: number,
   round: number, 
   pickNumber: number
 ): Promise<Pick> => {
   const response = await axios.post(`${API_URL}/picks`, {
     player_id: playerId,
-    team_id: teamId,
+    team_number: teamNumber,
     round,
     pick_number: pickNumber
   });
+  return response.data;
+};
+
+export const clearPicks = async (): Promise<void> => {
+  await axios.delete(`${API_URL}/picks`);
+};
+
+export const getDraftState = async (): Promise<DraftState> => {
+  const response = await axios.get(`${API_URL}/draft-state`);
+  return response.data;
+};
+
+export const updateDraftState = async (state: DraftState): Promise<DraftState> => {
+  const response = await axios.put(`${API_URL}/draft-state`, state);
   return response.data;
 }; 

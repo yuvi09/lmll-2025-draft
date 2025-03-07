@@ -46,8 +46,11 @@
                 <span class="pick-number">Pick #{{currentPickNumber}}</span>
                 <span class="team-name">{{currentPickTeam}}</span>
                 <span class="team-managers">{{currentTeamManagers}}</span>
+                <button type="button" class="skip-btn" (click)="skipPick()">Skip Pick</button>
               </div>
-              
+              <div class="next-pick-info">
+                <span>Next: {{nextPickTeam}} - {{nextTeamManagers}}</span>
+              </div>
             </div>
             
             <div class="form-group button-group">
@@ -205,6 +208,13 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <!-- Add this at the bottom of dashboard-content, after the team grids -->
+    <div class="reset-section">
+      <button class="reset-btn" (click)="resetDraft()">
+        Reset Draft
+      </button>
     </div>
   </div>
 </div>

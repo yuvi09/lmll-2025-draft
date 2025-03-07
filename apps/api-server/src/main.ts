@@ -79,6 +79,7 @@ const clearDatabase = () => {
       db.run('DROP TABLE IF EXISTS picks');
       db.run('DROP TABLE IF EXISTS teams');
       db.run('DROP TABLE IF EXISTS players');
+      db.run('DROP TABLE IF EXISTS draft_state');
       resolve();
     });
   });
@@ -165,6 +166,22 @@ db.serialize(() => {
             if (!columnInfo.some(row => row.name === 'notes')) {
               db.run('ALTER TABLE players ADD COLUMN notes TEXT');
             }
+
+            // Add this to the database initialization section
+            db.run(`
+              CREATE TABLE IF NOT EXISTS draft_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                current_round INTEGER NOT NULL DEFAULT 1,
+                current_pick_index INTEGER NOT NULL DEFAULT 0
+              )
+            `);
+
+            // Initialize draft state if not exists
+            db.get('SELECT * FROM draft_state WHERE id = 1', [], (err, row) => {
+              if (!row) {
+                db.run('INSERT INTO draft_state (id, current_round, current_pick_index) VALUES (1, 1, 0)');
+              }
+            });
 
             resolve();
           });
@@ -376,29 +393,49 @@ app.get('/picks/team/:teamNumber', (req, res) => {
 app.post('/picks', (req, res) => {
   const { player_id, team_number, round, pick_number } = req.body;
   
+  console.log('Received pick request:', { player_id, team_number, round, pick_number });
+  
   // Add type assertion for team
   db.get<DbTeam>('SELECT id FROM teams WHERE team_number = ?', [team_number], (err, team) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!team) return res.status(400).json({ error: 'Team not found' });
     
-    const team_id = team.id;
+    const team_id = team.id;  // Now TypeScript knows team.id exists
+    console.log('Found team_id:', team_id);
     
     // Check if player is already drafted
     db.get('SELECT id FROM picks WHERE player_id = ?', [player_id], (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (row) return res.status(400).json({ error: 'Player already drafted' });
+      if (err) {
+        console.error('Error checking player:', err);
+        return res.status(500).json({ error: err.message });
+      }
+      if (row) {
+        console.error('Player already drafted:', player_id);
+        return res.status(400).json({ error: 'Player already drafted' });
+      }
       
       // Check if team already has a pick in this round
       db.get('SELECT id FROM picks WHERE team_id = ? AND round = ?', [team_id, round], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (row) return res.status(400).json({ error: 'Team already has a pick in this round' });
+        if (err) {
+          console.error('Error checking team round:', err);
+          return res.status(500).json({ error: err.message });
+        }
+        if (row) {
+          console.error('Team already has pick in round:', { team_id, round });
+          return res.status(400).json({ error: 'Team already has a pick in this round' });
+        }
         
         // If all checks pass, insert the pick
         db.run(
           `INSERT INTO picks (player_id, team_id, round, pick_number) VALUES (?, ?, ?, ?)`,
           [player_id, team_id, round, pick_number],
           function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+              console.error('Error inserting pick:', err);
+              return res.status(500).json({ error: err.message });
+            }
+            
+            console.log('Successfully inserted pick, getting details...');
             
             // Return the new pick with all details
             db.get(`
@@ -415,7 +452,11 @@ app.post('/picks', (req, res) => {
               JOIN teams t ON p.team_id = t.id
               WHERE p.id = ?
             `, [this.lastID], (err, row) => {
-              if (err) return res.status(500).json({ error: err.message });
+              if (err) {
+                console.error('Error getting pick details:', err);
+                return res.status(500).json({ error: err.message });
+              }
+              console.log('Returning pick details:', row);
               res.json(row);
             });
           }
@@ -423,6 +464,34 @@ app.post('/picks', (req, res) => {
       });
     });
   });
+});
+
+// API: Delete all picks
+app.delete('/picks', (req, res) => {
+  db.run('DELETE FROM picks', [], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'All picks cleared successfully' });
+  });
+});
+
+// Add these new API endpoints
+app.get('/draft-state', (req, res) => {
+  db.get('SELECT current_round, current_pick_index FROM draft_state WHERE id = 1', [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(row);
+  });
+});
+
+app.put('/draft-state', (req, res) => {
+  const { current_round, current_pick_index } = req.body;
+  db.run(
+    'UPDATE draft_state SET current_round = ?, current_pick_index = ? WHERE id = 1',
+    [current_round, current_pick_index],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ current_round, current_pick_index });
+    }
+  );
 });
 
 // Start the Express server

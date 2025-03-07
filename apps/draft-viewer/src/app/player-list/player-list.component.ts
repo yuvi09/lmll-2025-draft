@@ -72,11 +72,7 @@ export class PlayerListComponent implements OnInit {
   
   playerSearch: string = '';
   
-  draftOrder: DraftTeam[] = [
-    { pickNumber: 1, teamNumber: 11, managers: 'DeSimone, Pasqua, Seeman' },
-    { pickNumber: 2, teamNumber: 6, managers: 'Candela, Dodia, Kuker' },
-    // ... rest of the teams
-  ];
+  draftOrder: DraftTeam[] = [];
 
   currentRound: number = 1;
   currentPickIndex: number = 0;
@@ -92,11 +88,15 @@ export class PlayerListComponent implements OnInit {
   }
 
   get currentPickTeam(): string {
-    return `Team ${this.draftOrder[this.currentPickIndex].teamNumber}`;
+    return this.currentPickIndex < this.draftOrder.length 
+      ? `Team ${this.draftOrder[this.currentPickIndex].teamNumber}`
+      : 'Draft Complete';
   }
 
   get currentTeamManagers(): string {
-    return this.draftOrder[this.currentPickIndex].managers;
+    return this.currentPickIndex < this.draftOrder.length 
+      ? this.draftOrder[this.currentPickIndex].managers
+      : '';
   }
   
   constructor(private playerService: PlayerService) {}
@@ -111,7 +111,8 @@ export class PlayerListComponent implements OnInit {
     await Promise.all([
       this.fetchPlayers(),
       this.fetchTeams(),
-      this.fetchPicks()
+      this.fetchPicks(),
+      this.fetchDraftState()
     ]);
   }
   
@@ -131,6 +132,16 @@ export class PlayerListComponent implements OnInit {
     try {
       this.loading.teams = true;
       this.teams = await ApiService.getTeams();
+      
+      // Create draftOrder from teams data
+      this.draftOrder = this.teams
+        .sort((a, b) => a.team_number - b.team_number)
+        .map(team => ({
+          pickNumber: team.team_number,
+          teamNumber: team.team_number,
+          managers: team.managers
+        }));
+        
     } catch (err) {
       this.error.teams = 'Failed to load teams';
       console.error(err);
@@ -157,16 +168,43 @@ export class PlayerListComponent implements OnInit {
     }
   }
   
+  async fetchDraftState() {
+    try {
+      const state = await ApiService.getDraftState();
+      this.currentRound = state.current_round;
+      this.currentPickIndex = state.current_pick_index;
+    } catch (err) {
+      console.error('Error loading draft state:', err);
+    }
+  }
+  
   async submitPick() {
     if (!this.selectedPlayer) return;
 
     try {
+      const currentTeam = this.draftOrder[this.currentPickIndex];
+      console.log('Submitting pick:', {
+        playerId: this.selectedPlayer,
+        teamNumber: currentTeam.teamNumber,
+        round: this.currentRound,
+        pickNumber: this.currentPickNumber
+      });
+      
       await ApiService.addPick(
         this.selectedPlayer,
-        this.draftOrder[this.currentPickIndex].teamNumber,
+        currentTeam.teamNumber,
         this.currentRound,
         this.currentPickNumber
       );
+
+      // Update draft state in database
+      await ApiService.updateDraftState({
+        current_round: this.currentRound,
+        current_pick_index: this.currentPickIndex
+      });
+
+      // Refresh picks after adding new one
+      await this.fetchPicks();
 
       // Move to next pick
       this.currentPickIndex++;
@@ -178,8 +216,10 @@ export class PlayerListComponent implements OnInit {
       // Reset selection
       this.selectedPlayer = null;
       this.playerSearch = '';
-    } catch (err) {
-      // ... error handling
+    } catch (err: any) {
+      console.error('Error adding pick:', err);
+      console.error('Error response:', err.response?.data);
+      this.error.addPick = err.response?.data?.error || 'Failed to add pick';
     }
   }
   
@@ -294,5 +334,66 @@ export class PlayerListComponent implements OnInit {
 
   getTeamPicks(teamNumber: number): ApiService.Pick[] {
     return this.picks.filter(pick => pick.team_number === teamNumber);
+  }
+
+  // Add reset functionality
+  async resetDraft() {
+    if (confirm('Are you sure you want to reset the draft? This will clear all picks.')) {
+      try {
+        await ApiService.clearPicks();
+        await ApiService.updateDraftState({
+          current_round: 1,
+          current_pick_index: 0
+        });
+        
+        this.currentRound = 1;
+        this.currentPickIndex = 0;
+        this.selectedPlayer = null;
+        this.playerSearch = '';
+        
+        await this.fetchPicks();
+      } catch (err) {
+        console.error('Error resetting draft:', err);
+      }
+    }
+  }
+
+  get nextPickTeam(): string {
+    const nextIndex = this.currentPickIndex + 1;
+    if (nextIndex >= this.draftOrder.length) {
+      return 'Round Complete';
+    }
+    return `Team ${this.draftOrder[nextIndex].teamNumber}`;
+  }
+
+  get nextTeamManagers(): string {
+    const nextIndex = this.currentPickIndex + 1;
+    if (nextIndex >= this.draftOrder.length) {
+      return '';
+    }
+    return this.draftOrder[nextIndex].managers;
+  }
+
+  async skipPick() {
+    try {
+      // Move to next pick
+      this.currentPickIndex++;
+      if (this.currentPickIndex >= this.draftOrder.length) {
+        this.currentPickIndex = 0;
+        this.currentRound++;
+      }
+
+      // Update draft state in database
+      await ApiService.updateDraftState({
+        current_round: this.currentRound,
+        current_pick_index: this.currentPickIndex
+      });
+
+      // Clear any existing selection
+      this.selectedPlayer = null;
+      this.playerSearch = '';
+    } catch (err) {
+      console.error('Error skipping pick:', err);
+    }
   }
 }

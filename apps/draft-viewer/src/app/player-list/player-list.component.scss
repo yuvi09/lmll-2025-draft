@@ -399,14 +399,14 @@
 
   .pick-info {
     display: flex;
-    gap: 12px;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 12px;
+    margin-bottom: 8px;
 
     .round-indicator {
       display: inline-flex;
       align-items: center;
-      background: #0f172a;  // Darker blue/slate color
+      background: #0f172a;
       color: white;
       padding: 4px 12px;
       border-radius: 16px;
@@ -422,10 +422,31 @@
     .team-name {
       font-weight: 500;
     }
+
+    .team-managers {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .skip-btn {
+      padding: 4px 12px;
+      background-color: #64748b;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-left: auto;
+
+      &:hover {
+        background-color: #475569;
+      }
+    }
   }
 
-  .team-managers {
-    font-size: 13px;
+  .next-pick-info {
+    font-size: 14px;
     color: #64748b;
     margin-top: 4px;
   }
@@ -500,5 +521,34 @@
 @media (max-width: 640px) {
   .teams-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.reset-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+
+  .reset-btn {
+    padding: 12px 24px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #dc2626;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5);
+    }
   }
 }
