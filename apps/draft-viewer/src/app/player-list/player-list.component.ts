@@ -57,7 +57,7 @@ export class PlayerListComponent implements OnInit {
   players: ApiService.Player[] = [];
   teams: ApiService.Team[] = [];
   picks: ApiService.Pick[] = [];
-  cdkPicks: ApiService.Pick[] = []; // Picks for Team CDK
+  teamSixPicks: ApiService.Pick[] = []; // Picks for Team 6
   
   // Form data for Add Pick
   selectedPlayer: number | null = null;
@@ -122,6 +122,17 @@ export class PlayerListComponent implements OnInit {
     try {
       this.loading.players = true;
       this.players = await ApiService.getPlayers();
+      
+      // Get top 20 players for each grade, sorted by pitching
+      this.thirdGradePlayers = this.players
+        .filter(p => p.grade === 3)
+        .sort((a, b) => b.pitching - a.pitching)
+        .slice(0, 20);
+        
+      this.secondGradePlayers = this.players
+        .filter(p => p.grade === 2)
+        .sort((a, b) => b.pitching - a.pitching)
+        .slice(0, 20);
     } catch (err) {
       this.error.players = 'Failed to load players';
       console.error(err);
@@ -162,11 +173,8 @@ export class PlayerListComponent implements OnInit {
       this.loading.picks = true;
       this.picks = await ApiService.getPicks();
       
-      // Filter picks for Team CDK
-      const cdkTeam = this.teams.find(team => team.name === 'CDK');
-      if (cdkTeam) {
-        this.cdkPicks = this.picks.filter(pick => pick.team_id === cdkTeam.id);
-      }
+      // Filter picks for Team 6
+      this.teamSixPicks = this.picks.filter(pick => pick.team_number === 6);
     } catch (err) {
       this.error.picks = 'Failed to load picks';
       console.error(err);
@@ -388,7 +396,16 @@ export class PlayerListComponent implements OnInit {
   async skipPick() {
     try {
       const roundOrder = this.getCurrentRoundPickOrder();
+      const currentTeam = roundOrder[this.currentPickIndex];
       
+      // Create a blank pick entry
+      await ApiService.addPick(
+        -1, // Use -1 to indicate skipped pick
+        currentTeam.teamNumber,
+        this.currentRound,
+        this.currentPickNumber
+      );
+
       // Move to next pick
       this.currentPickIndex++;
       if (this.currentPickIndex >= roundOrder.length) {
@@ -401,6 +418,9 @@ export class PlayerListComponent implements OnInit {
         current_round: this.currentRound,
         current_pick_index: this.currentPickIndex
       });
+
+      // Refresh picks to show the skipped pick
+      await this.fetchPicks();
 
       // Clear any existing selection
       this.selectedPlayer = null;
@@ -416,5 +436,10 @@ export class PlayerListComponent implements OnInit {
     return this.currentRound % 2 === 0 
       ? [...this.draftOrder].reverse()
       : this.draftOrder;
+  }
+
+  getTeamManagers(teamNumber: number): string {
+    const team = this.teams.find(t => t.team_number === teamNumber);
+    return team ? team.managers : '';
   }
 }

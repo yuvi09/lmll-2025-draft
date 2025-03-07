@@ -220,15 +220,13 @@ db.serialize(() => {
         db.run(`
           CREATE TABLE IF NOT EXISTS picks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id INTEGER NOT NULL,
+            player_id INTEGER,
             team_id INTEGER NOT NULL,
             round INTEGER NOT NULL,
             pick_number INTEGER NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (player_id) REFERENCES players(id),
-            FOREIGN KEY (team_id) REFERENCES teams(id),
-            UNIQUE(player_id),
-            UNIQUE(team_id, round)
+            FOREIGN KEY (player_id) REFERENCES players (id),
+            FOREIGN KEY (team_id) REFERENCES teams (id)
           )
         `);
 
@@ -419,74 +417,60 @@ app.post('/picks', (req, res) => {
   
   console.log('Received pick request:', { player_id, team_number, round, pick_number });
   
-  // Add type assertion for team
-  db.get<DbTeam>('SELECT id FROM teams WHERE team_number = ?', [team_number], (err, team) => {
+  db.get<Team>('SELECT id FROM teams WHERE team_number = ?', [team_number], (err, team) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!team) return res.status(400).json({ error: 'Team not found' });
     
-    const team_id = team.id;  // Now TypeScript knows team.id exists
-    console.log('Found team_id:', team_id);
+    const team_id = (team as Team).id;  // Type assertion here
     
-    // Check if player is already drafted
-    db.get('SELECT id FROM picks WHERE player_id = ?', [player_id], (err, row) => {
-      if (err) {
-        console.error('Error checking player:', err);
-        return res.status(500).json({ error: err.message });
-      }
-      if (row) {
-        console.error('Player already drafted:', player_id);
-        return res.status(400).json({ error: 'Player already drafted' });
-      }
-      
+    // Skip player validation if it's a skipped pick (player_id === -1)
+    if (player_id === -1) {
+      insertPick();
+    } else {
+      // Check if player is already drafted
+      db.get('SELECT id FROM picks WHERE player_id = ?', [player_id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (row) return res.status(400).json({ error: 'Player already drafted' });
+        insertPick();
+      });
+    }
+
+    function insertPick() {
       // Check if team already has a pick in this round
       db.get('SELECT id FROM picks WHERE team_id = ? AND round = ?', [team_id, round], (err, row) => {
-        if (err) {
-          console.error('Error checking team round:', err);
-          return res.status(500).json({ error: err.message });
-        }
-        if (row) {
-          console.error('Team already has pick in round:', { team_id, round });
-          return res.status(400).json({ error: 'Team already has a pick in this round' });
-        }
+        if (err) return res.status(500).json({ error: err.message });
+        if (row) return res.status(400).json({ error: 'Team already has a pick in this round' });
         
-        // If all checks pass, insert the pick
+        // Insert the pick (null for player_id if skipped)
+        const finalPlayerId = player_id === -1 ? null : player_id;
         db.run(
           `INSERT INTO picks (player_id, team_id, round, pick_number) VALUES (?, ?, ?, ?)`,
-          [player_id, team_id, round, pick_number],
+          [finalPlayerId, team_id, round, pick_number],
           function (err) {
-            if (err) {
-              console.error('Error inserting pick:', err);
-              return res.status(500).json({ error: err.message });
-            }
-            
-            console.log('Successfully inserted pick, getting details...');
+            if (err) return res.status(500).json({ error: err.message });
             
             // Return the new pick with all details
             db.get(`
               SELECT 
                 p.*,
-                pl.name as player_name,
-                pl.grade,
-                pl.overall,
+                COALESCE(pl.name, 'SKIPPED') as player_name,
+                COALESCE(pl.grade, 0) as grade,
+                COALESCE(pl.overall, 0) as overall,
                 t.team_number,
                 t.name as team_name,
                 t.managers as team_managers
               FROM picks p
-              JOIN players pl ON p.player_id = pl.id
+              LEFT JOIN players pl ON p.player_id = pl.id
               JOIN teams t ON p.team_id = t.id
               WHERE p.id = ?
             `, [this.lastID], (err, row) => {
-              if (err) {
-                console.error('Error getting pick details:', err);
-                return res.status(500).json({ error: err.message });
-              }
-              console.log('Returning pick details:', row);
+              if (err) return res.status(500).json({ error: err.message });
               res.json(row);
             });
           }
         );
       });
-    });
+    }
   });
 });
 

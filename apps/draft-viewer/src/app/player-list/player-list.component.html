@@ -72,49 +72,58 @@
       <!-- Top 3rd Grade Players Card -->
       <div class="card">
         <div class="card-header">
-          <h2>Top 3rd Grade Players</h2>
-          <button class="see-all">See all</button>
+          <h2>Top 3rd Grade Players (By Pitching)</h2>
         </div>
-        <div class="player-list">
-          <div class="list-header">
-            <span>Name</span>
-            <span>Details</span>
-          </div>
-          <div class="player-row" *ngFor="let player of thirdGradePlayers">
-            <span class="name">{{player.name}}</span>
-            <div class="player-metadata">
-              <span class="tag">{{player.age}} yrs</span>
-              <span class="tag">{{player.rating}}</span>
-            </div>
-          </div>
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Pitching</th>
+                <th>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of thirdGradePlayers">
+                <td>{{player.name}}</td>
+                <td>{{player.pitching}}</td>
+                <td>{{player.overall}}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- Top 2nd Grade Players Card -->
       <div class="card">
         <div class="card-header">
-          <h2>Top 2nd Grade Players</h2>
-          <button class="see-all">See all</button>
+          <h2>Top 2nd Grade Players (By Pitching)</h2>
         </div>
-        <div class="player-list">
-          <div class="list-header">
-            <span>Name</span>
-            <span>Details</span>
-          </div>
-          <div class="player-row" *ngFor="let player of secondGradePlayers">
-            <span class="name">{{player.name}}</span>
-            <div class="player-metadata">
-              <span class="tag">{{player.age}} yrs</span>
-              <span class="tag">{{player.rating}}</span>
-            </div>
-          </div>
+        <div class="card-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Pitching</th>
+                <th>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of secondGradePlayers">
+                <td>{{player.name}}</td>
+                <td>{{player.pitching}}</td>
+                <td>{{player.overall}}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Team CDK - Picks Card -->
-      <div class="card">
+      <!-- Team 6 - Picks Card -->
+      <div class="card team-six">
         <div class="card-header">
-          <h2>Team CDK - Picks</h2>
+          <h2>Team 6 - Picks</h2>
+          <div class="managers">{{getTeamManagers(6)}}</div>
         </div>
         <div class="card-body">
           <div *ngIf="loading.picks">Loading...</div>
@@ -129,13 +138,13 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let pick of cdkPicks">
+              <tr *ngFor="let pick of teamSixPicks">
                 <td>{{ pick.round }}</td>
                 <td>{{ pick.player_name }}</td>
                 <td>{{ pick.grade }}</td>
                 <td>{{ pick.overall }}</td>
               </tr>
-              <tr *ngIf="cdkPicks.length === 0">
+              <tr *ngIf="teamSixPicks.length === 0">
                 <td colspan="4" class="text-center">No picks yet</td>
               </tr>
             </tbody>
