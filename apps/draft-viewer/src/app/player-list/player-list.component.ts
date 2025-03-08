@@ -192,6 +192,12 @@ export class PlayerListComponent implements OnInit {
     if (!this.selectedPlayer) return;
 
     try {
+      const player = this.players.find(p => p.id === this.selectedPlayer);
+      if (player && this.isCoachesKid(player)) {
+        this.error.addPick = "Coach's kids are not eligible for draft picks";
+        return;
+      }
+
       const roundOrder = this.getCurrentRoundPickOrder();
       const currentTeam = roundOrder[this.currentPickIndex];
       
@@ -294,12 +300,12 @@ export class PlayerListComponent implements OnInit {
         const fullName = player.name.toLowerCase();
         const nameParts = fullName.split(' ');
         
-        // Check if search term is in full name or matches any part
+        // Only filter out drafted players, keep coaches' kids visible
         return (fullName.includes(searchTerm) || 
                nameParts.some(part => part.includes(searchTerm))) &&
                !this.isPlayerDrafted(player.id);
       })
-      .slice(0, 5); // Limit to 5 results
+      .slice(0, 5);
   }
 
   onPlayerSelected(event: any) {
@@ -445,20 +451,21 @@ export class PlayerListComponent implements OnInit {
 
   // Add new method to update available players
   updateAvailablePlayers() {
-    // Get all undrafted players for each grade, sorted by pitching
     this.thirdGradePlayers = this.players
       .filter(p => 
         p.grade === 3 && 
-        !this.isPlayerDrafted(p.id)
+        !this.isPlayerDrafted(p.id) &&
+        !this.isCoachesKid(p)
       )
-      .sort((a, b) => b.pitching - a.pitching);
+      .sort((a, b) => (b.mc_pitching || 0) - (a.mc_pitching || 0));
       
     this.secondGradePlayers = this.players
       .filter(p => 
         p.grade === 2 && 
-        !this.isPlayerDrafted(p.id)
+        !this.isPlayerDrafted(p.id) &&
+        !this.isCoachesKid(p)
       )
-      .sort((a, b) => b.pitching - a.pitching);
+      .sort((a, b) => (b.mc_pitching || 0) - (a.mc_pitching || 0));
   }
 
   getPlayerRatingsTooltip(player: ApiService.Player): string {
@@ -470,5 +477,13 @@ export class PlayerListComponent implements OnInit {
       Previous Division: ${player.py_division || 'N/A'}
       Notes: ${player.notes || 'None'}
     `;
+  }
+
+  // Add this helper method
+  isCoachesKid(player: ApiService.Player): boolean {
+    if (!player.notes) return false;
+    return player.notes.includes('CC-Green') || 
+           player.notes.includes('CC-3rd') || 
+           player.notes.startsWith('CC-');
   }
 }

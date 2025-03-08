@@ -27,12 +27,15 @@
                 placeholder="Start typing a name..."
               >
               <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onPlayerSelected($event)">
-                <mat-option *ngFor="let player of filteredPlayers" [value]="player.name">
+                <mat-option *ngFor="let player of filteredPlayers" 
+                            [value]="player.name"
+                            [disabled]="isCoachesKid(player)">
                   <div class="player-option">
                     <span class="name">{{player.name}}</span>
                     <span class="details">
                       Grade: {{player.grade}} | Overall: {{player.overall}}
                       <span *ngIf="player.position">, {{player.position}}</span>
+                      <span *ngIf="isCoachesKid(player)" class="coaches-kid-tag">Coach's Kid - Not Eligible</span>
                     </span>
                   </div>
                 </mat-option>
