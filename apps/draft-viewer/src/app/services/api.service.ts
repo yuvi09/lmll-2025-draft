@@ -12,11 +12,17 @@ export interface Player {
   overall: number;
   draft_number: number;
   position?: string;
+  mc_batting?: number;
+  mc_fielding?: number;
+  mc_pitching?: number;
+  mc_overall?: number;
+  yd_batting?: number;
+  yd_fielding?: number;
+  yd_pitching?: number;
   age?: number;
+  py_division?: string;
   rating?: string;
-  lastYearDivision?: string;
-  positions?: string[];
-  Comments?: string;
+  notes?: string;
 }
 
 export interface Team {

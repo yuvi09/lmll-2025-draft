@@ -88,7 +88,12 @@
               <tr *ngFor="let player of thirdGradePlayers">
                 <td>{{player.draft_number}}</td>
                 <td>{{player.name}}</td>
-                <td>{{player.pitching}}</td>
+                <td>
+                  {{player.pitching}}
+                  <div class="ratings-detail">
+                    MC: {{player.mc_pitching}} | YD: {{player.yd_pitching}}
+                  </div>
+                </td>
                 <td>{{player.overall}}</td>
               </tr>
             </tbody>

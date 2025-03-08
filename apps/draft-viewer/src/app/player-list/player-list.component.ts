@@ -319,7 +319,7 @@ export class PlayerListComponent implements OnInit {
     if (selectedPlayer) {
       this.recentPlayers.unshift({
         ...selectedPlayer,
-        comments: (selectedPlayer.Comments || '').split(',').map(c => c.trim()).filter(c => c)
+        comments: (selectedPlayer.notes || '').split(',').map((c: string) => c.trim()).filter((c: string) => c)
       });
       
       // Reset form
@@ -459,5 +459,16 @@ export class PlayerListComponent implements OnInit {
         !this.isPlayerDrafted(p.id)
       )
       .sort((a, b) => b.pitching - a.pitching);
+  }
+
+  getPlayerRatingsTooltip(player: ApiService.Player): string {
+    return `
+      MC Rating: ${player.mc_pitching || 'N/A'}
+      YD Rating: ${player.yd_pitching || 'N/A'}
+      Age: ${player.age}
+      Position: ${player.position || 'N/A'}
+      Previous Division: ${player.py_division || 'N/A'}
+      Notes: ${player.notes || 'None'}
+    `;
   }
 }

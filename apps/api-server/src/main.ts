@@ -102,10 +102,16 @@ db.serialize(() => {
         overall INTEGER NOT NULL,
         draft_number INTEGER,
         position TEXT,
-        height TEXT,
-        weight TEXT,
-        bats TEXT,
-        throws TEXT,
+        mc_batting INTEGER,
+        mc_fielding INTEGER,
+        mc_pitching INTEGER,
+        mc_overall INTEGER,
+        yd_batting INTEGER,
+        yd_fielding INTEGER,
+        yd_pitching INTEGER,
+        age REAL,
+        py_division TEXT,
+        rating TEXT,
         notes TEXT
       )
     `);
@@ -241,7 +247,7 @@ db.serialize(() => {
           // Only seed if no players exist
           if ((result as {count: number}).count === 0) {
             try {
-              const playerDataPath = path.resolve('apps/draft-viewer/src/assets/data/player_ratings.json');
+              const playerDataPath = path.resolve('apps/draft-viewer/src/assets/data/player_ratings_combined.json');
               const playerData = JSON.parse(fs.readFileSync(playerDataPath, 'utf8'));
               
               // Begin transaction for faster inserts
@@ -251,8 +257,10 @@ db.serialize(() => {
               const stmt = db.prepare(`
                 INSERT INTO players (
                   name, grade, batting, pitching, fielding, overall, draft_number,
-                  position, height, weight, bats, throws, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  position, mc_batting, mc_fielding, mc_pitching, mc_overall,
+                  yd_batting, yd_fielding, yd_pitching, age, py_division, rating,
+                  notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               `);
               
               playerData.forEach((player: PlayerRating) => {
@@ -260,16 +268,25 @@ db.serialize(() => {
                 const mappedPlayer = {
                   name: player.Name,
                   grade: player.Grd === '2nd' ? 2 : 3,
-                  batting: Math.round((player.Batting ?? 1) * 20),
-                  pitching: Math.round((player.Throwing ?? 1) * 20),
-                  fielding: Math.round((player.Fiedling ?? 1) * 20),
-                  position: player.Pos || null,
+                  batting: Math.round(((player['MC-Bat'] || 0) + (player['YD-Bat'] || 0)) * 10),
+                  pitching: Math.round(((player['MC-Pitch'] || 0) + (player['YD-Pitch'] || 0)) * 10),
+                  fielding: Math.round(((player['MC-Field'] || 0) + (player['YD-Field'] || 0)) * 10),
+                  overall: Math.round(((player['MC-Ovr'] || 0) + (player.Ratg || 0)) * 10),
+                  mc_batting: player['MC-Bat'],
+                  mc_fielding: player['MC-Field'],
+                  mc_pitching: player['MC-Pitch'],
+                  mc_overall: player['MC-Ovr'],
+                  yd_batting: player['YD-Bat'],
+                  yd_fielding: player['YD-Field'],
+                  yd_pitching: player['YD-Pitch'],
                   draft_number: player['D#'],
+                  position: player.Pos,
+                  age: player.Age,
+                  py_division: player['PY Division'],
+                  rating: player.Ratg?.toString(),
                   notes: [
-                    player.Comments, 
-                    player['YD Notes'],
-                    player['PY Division'] ? `Previous: ${player['PY Division']}` : null,
-                    player.Ratg ? `Rating: ${player.Ratg}` : null
+                    player.Comments,
+                    player['YD Notes']
                   ].filter(note => note).join(', ') || null
                 };
 
@@ -300,10 +317,16 @@ db.serialize(() => {
                   overall,
                   mappedPlayer.draft_number,
                   mappedPlayer.position?.trim() || null,
-                  null, // height
-                  null, // weight
-                  null, // bats
-                  null, // throws
+                  mappedPlayer.mc_batting,
+                  mappedPlayer.mc_fielding,
+                  mappedPlayer.mc_pitching,
+                  mappedPlayer.mc_overall,
+                  mappedPlayer.yd_batting,
+                  mappedPlayer.yd_fielding,
+                  mappedPlayer.yd_pitching,
+                  mappedPlayer.age,
+                  mappedPlayer.py_division,
+                  mappedPlayer.rating,
                   mappedPlayer.notes
                 );
               });
