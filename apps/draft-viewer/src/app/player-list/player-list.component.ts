@@ -123,14 +123,8 @@ export class PlayerListComponent implements OnInit {
       this.loading.players = true;
       this.players = await ApiService.getPlayers();
       
-      // Get all players for each grade, sorted by pitching
-      this.thirdGradePlayers = this.players
-        .filter(p => p.grade === 3)
-        .sort((a, b) => b.pitching - a.pitching);
-        
-      this.secondGradePlayers = this.players
-        .filter(p => p.grade === 2)
-        .sort((a, b) => b.pitching - a.pitching);
+      // Update the available players lists
+      this.updateAvailablePlayers();
     } catch (err) {
       this.error.players = 'Failed to load players';
       console.error(err);
@@ -173,6 +167,9 @@ export class PlayerListComponent implements OnInit {
       
       // Filter picks for Team 6
       this.teamSixPicks = this.picks.filter(pick => pick.team_number === 6);
+      
+      // Update available players after picks change
+      this.updateAvailablePlayers();
     } catch (err) {
       this.error.picks = 'Failed to load picks';
       console.error(err);
@@ -444,5 +441,23 @@ export class PlayerListComponent implements OnInit {
   getTeamManagers(teamNumber: number): string {
     const team = this.teams.find(t => t.team_number === teamNumber);
     return team ? team.managers : '';
+  }
+
+  // Add new method to update available players
+  updateAvailablePlayers() {
+    // Get all undrafted players for each grade, sorted by pitching
+    this.thirdGradePlayers = this.players
+      .filter(p => 
+        p.grade === 3 && 
+        !this.isPlayerDrafted(p.id)
+      )
+      .sort((a, b) => b.pitching - a.pitching);
+      
+    this.secondGradePlayers = this.players
+      .filter(p => 
+        p.grade === 2 && 
+        !this.isPlayerDrafted(p.id)
+      )
+      .sort((a, b) => b.pitching - a.pitching);
   }
 }
