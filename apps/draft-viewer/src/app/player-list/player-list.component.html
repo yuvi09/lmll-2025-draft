@@ -70,7 +70,7 @@
     <!-- Keep existing cards row -->
     <div class="cards-grid">
       <!-- Top 3rd Grade Players Card -->
-      <div class="card">
+      <div class="card grade-card">
         <div class="card-header">
           <h2>Top 3rd Grade Players (By Pitching)</h2>
         </div>
@@ -78,6 +78,7 @@
           <table>
             <thead>
               <tr>
+                <th>Draft#</th>
                 <th>Player</th>
                 <th>Pitching</th>
                 <th>Overall</th>
@@ -85,6 +86,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let player of thirdGradePlayers">
+                <td>{{player.draft_number}}</td>
                 <td>{{player.name}}</td>
                 <td>{{player.pitching}}</td>
                 <td>{{player.overall}}</td>
@@ -95,7 +97,7 @@
       </div>
 
       <!-- Top 2nd Grade Players Card -->
-      <div class="card">
+      <div class="card grade-card">
         <div class="card-header">
           <h2>Top 2nd Grade Players (By Pitching)</h2>
         </div>
@@ -103,6 +105,7 @@
           <table>
             <thead>
               <tr>
+                <th>Draft#</th>
                 <th>Player</th>
                 <th>Pitching</th>
                 <th>Overall</th>
@@ -110,6 +113,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let player of secondGradePlayers">
+                <td>{{player.draft_number}}</td>
                 <td>{{player.name}}</td>
                 <td>{{player.pitching}}</td>
                 <td>{{player.overall}}</td>

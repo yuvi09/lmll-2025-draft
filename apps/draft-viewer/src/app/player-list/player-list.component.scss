@@ -56,11 +56,65 @@
       background-color: #f8fafc;
     }
 
-    td:nth-child(2),
+    td:nth-child(1),
     td:nth-child(3),
-    th:nth-child(2),
-    th:nth-child(3) {
+    td:nth-child(4),
+    th:nth-child(1),
+    th:nth-child(3),
+    th:nth-child(4) {
       text-align: center;
+    }
+
+    td:nth-child(2),
+    th:nth-child(2) {
+      text-align: left;
+      padding-left: 16px;
+    }
+  }
+
+  // Add styles for grade cards
+  &.grade-card {
+    .card-body {
+      padding: 0; // Remove padding to align table with card edges
+      
+      table {
+        // Make header fixed
+        thead {
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          background: #f1f5f9;
+        }
+
+        // Make body scrollable
+        tbody {
+          display: block;
+          overflow-y: auto;
+          height: 400px; // Fixed height for scrolling
+
+          // Ensure proper alignment with header
+          tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+          }
+        }
+
+        // Set fixed widths for columns
+        thead {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
+        }
+
+        // Column widths
+        th, td {
+          &:nth-child(1) { width: 15%; } // Draft#
+          &:nth-child(2) { width: 45%; } // Player
+          &:nth-child(3) { width: 20%; } // Pitching
+          &:nth-child(4) { width: 20%; } // Overall
+        }
+      }
     }
   }
 }

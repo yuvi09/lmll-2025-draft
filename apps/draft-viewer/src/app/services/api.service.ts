@@ -10,6 +10,7 @@ export interface Player {
   pitching: number;
   fielding: number;
   overall: number;
+  draft_number: number;
   position?: string;
   age?: number;
   rating?: string;

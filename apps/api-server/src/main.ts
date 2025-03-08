@@ -100,6 +100,7 @@ db.serialize(() => {
         pitching INTEGER NOT NULL,
         fielding INTEGER NOT NULL,
         overall INTEGER NOT NULL,
+        draft_number INTEGER,
         position TEXT,
         height TEXT,
         weight TEXT,
@@ -249,9 +250,9 @@ db.serialize(() => {
               // Prepare statement with all fields
               const stmt = db.prepare(`
                 INSERT INTO players (
-                  name, grade, batting, pitching, fielding, overall,
+                  name, grade, batting, pitching, fielding, overall, draft_number,
                   position, height, weight, bats, throws, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               `);
               
               playerData.forEach((player: PlayerRating) => {
@@ -263,6 +264,7 @@ db.serialize(() => {
                   pitching: Math.round((player.Throwing ?? 1) * 20),
                   fielding: Math.round((player.Fiedling ?? 1) * 20),
                   position: player.Pos || null,
+                  draft_number: player['D#'],
                   notes: [
                     player.Comments, 
                     player['YD Notes'],
@@ -296,6 +298,7 @@ db.serialize(() => {
                   mappedPlayer.pitching,
                   mappedPlayer.fielding,
                   overall,
+                  mappedPlayer.draft_number,
                   mappedPlayer.position?.trim() || null,
                   null, // height
                   null, // weight

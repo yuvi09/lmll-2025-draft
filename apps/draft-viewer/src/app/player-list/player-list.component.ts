@@ -123,16 +123,14 @@ export class PlayerListComponent implements OnInit {
       this.loading.players = true;
       this.players = await ApiService.getPlayers();
       
-      // Get top 20 players for each grade, sorted by pitching
+      // Get all players for each grade, sorted by pitching
       this.thirdGradePlayers = this.players
         .filter(p => p.grade === 3)
-        .sort((a, b) => b.pitching - a.pitching)
-        .slice(0, 20);
+        .sort((a, b) => b.pitching - a.pitching);
         
       this.secondGradePlayers = this.players
         .filter(p => p.grade === 2)
-        .sort((a, b) => b.pitching - a.pitching)
-        .slice(0, 20);
+        .sort((a, b) => b.pitching - a.pitching);
     } catch (err) {
       this.error.players = 'Failed to load players';
       console.error(err);
@@ -288,17 +286,22 @@ export class PlayerListComponent implements OnInit {
   }
 
   onPlayerSearchInput(event: any) {
-    const searchTerm = event.target.value.toLowerCase();
+    const searchTerm = event.target.value.toLowerCase().trim();
     if (searchTerm.length < 2) {
       this.filteredPlayers = [];
       return;
     }
 
     this.filteredPlayers = this.players
-      .filter(player => 
-        player.name.toLowerCase().includes(searchTerm) &&
-        !this.isPlayerDrafted(player.id)
-      )
+      .filter(player => {
+        const fullName = player.name.toLowerCase();
+        const nameParts = fullName.split(' ');
+        
+        // Check if search term is in full name or matches any part
+        return (fullName.includes(searchTerm) || 
+               nameParts.some(part => part.includes(searchTerm))) &&
+               !this.isPlayerDrafted(player.id);
+      })
       .slice(0, 5); // Limit to 5 results
   }
 
