@@ -395,14 +395,14 @@ app.get('/picks', (req, res) => {
   db.all(`
     SELECT 
       p.*,
-      pl.name as player_name,
-      pl.grade,
-      pl.overall,
+      COALESCE(pl.name, 'Skipped Pick') as player_name,
+      COALESCE(pl.grade, 0) as grade,
+      COALESCE(pl.overall, 0) as overall,
       t.team_number,
       t.name as team_name,
       t.managers as team_managers
     FROM picks p
-    JOIN players pl ON p.player_id = pl.id
+    LEFT JOIN players pl ON p.player_id = pl.id
     JOIN teams t ON p.team_id = t.id
     ORDER BY p.round, p.pick_number
   `, [], (err, rows) => {
@@ -417,13 +417,13 @@ app.get('/picks/team/:teamNumber', (req, res) => {
   db.all(`
     SELECT 
       p.*,
-      pl.name as player_name,
-      pl.grade,
-      pl.overall,
+      COALESCE(pl.name, 'Skipped Pick') as player_name,
+      COALESCE(pl.grade, 0) as grade,
+      COALESCE(pl.overall, 0) as overall,
       t.name as team_name,
       t.managers as team_managers
     FROM picks p
-    JOIN players pl ON p.player_id = pl.id
+    LEFT JOIN players pl ON p.player_id = pl.id
     JOIN teams t ON p.team_id = t.id
     WHERE t.team_number = ?
     ORDER BY p.round
