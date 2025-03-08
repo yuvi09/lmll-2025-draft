@@ -80,21 +80,18 @@
               <tr>
                 <th>Draft#</th>
                 <th>Player</th>
-                <th>Pitching</th>
-                <th>Overall</th>
+                <th>MC-Pitch</th>
+                <th>YD-Pitch</th>
+                <th>MC-Ovr</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let player of thirdGradePlayers">
                 <td>{{player.draft_number}}</td>
-                <td>{{player.name}}</td>
-                <td>
-                  {{player.pitching}}
-                  <div class="ratings-detail">
-                    MC: {{player.mc_pitching}} | YD: {{player.yd_pitching}}
-                  </div>
-                </td>
-                <td>{{player.overall}}</td>
+                <td [title]="player.notes">{{player.name}}</td>
+                <td>{{player.mc_pitching}}</td>
+                <td>{{player.yd_pitching}}</td>
+                <td>{{player.mc_overall}}</td>
               </tr>
             </tbody>
           </table>
@@ -112,16 +109,18 @@
               <tr>
                 <th>Draft#</th>
                 <th>Player</th>
-                <th>Pitching</th>
-                <th>Overall</th>
+                <th>MC-Pitch</th>
+                <th>YD-Pitch</th>
+                <th>MC-Ovr</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let player of secondGradePlayers">
                 <td>{{player.draft_number}}</td>
-                <td>{{player.name}}</td>
-                <td>{{player.pitching}}</td>
-                <td>{{player.overall}}</td>
+                <td [title]="player.notes">{{player.name}}</td>
+                <td>{{player.mc_pitching}}</td>
+                <td>{{player.yd_pitching}}</td>
+                <td>{{player.mc_overall}}</td>
               </tr>
             </tbody>
           </table>

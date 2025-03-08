@@ -59,9 +59,11 @@
     td:nth-child(1),
     td:nth-child(3),
     td:nth-child(4),
+    td:nth-child(5),
     th:nth-child(1),
     th:nth-child(3),
-    th:nth-child(4) {
+    th:nth-child(4),
+    th:nth-child(5) {
       text-align: center;
     }
 
@@ -109,10 +111,11 @@
 
         // Column widths
         th, td {
-          &:nth-child(1) { width: 15%; } // Draft#
-          &:nth-child(2) { width: 45%; } // Player
-          &:nth-child(3) { width: 20%; } // Pitching
-          &:nth-child(4) { width: 20%; } // Overall
+          &:nth-child(1) { width: 10%; }  // Draft# (smaller)
+          &:nth-child(2) { width: 35%; }  // Player (smaller)
+          &:nth-child(3) { width: 15%; }  // MC Pitch
+          &:nth-child(4) { width: 15%; }  // YD Pitch
+          &:nth-child(5) { width: 25%; }  // MC Overall (wider)
         }
       }
     }

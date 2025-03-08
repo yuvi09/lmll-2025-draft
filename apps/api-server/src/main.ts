@@ -38,15 +38,19 @@ interface DbTeam {
   id: number;
 }
 
-// Add interface for the JSON data structure
+// Update the interface to include all fields
 interface PlayerRating {
   Grd: string;
   'D#': number;
   Name: string;
   Age: number;
-  Batting: number;
-  Fiedling: number;
-  Throwing: number;
+  'MC-Bat': number;
+  'MC-Field': number;
+  'MC-Pitch': number;
+  'MC-Ovr': number;
+  'YD-Bat': number;
+  'YD-Field': number;
+  'YD-Pitch': number;
   'YD Notes'?: string;
   'PY Division'?: string;
   Ratg?: string;
@@ -264,14 +268,14 @@ db.serialize(() => {
               `);
               
               playerData.forEach((player: PlayerRating) => {
-                // Map the fields correctly with default values
+                console.log('Player MC-Ovr:', player['MC-Ovr']);
                 const mappedPlayer = {
                   name: player.Name,
                   grade: player.Grd === '2nd' ? 2 : 3,
-                  batting: Math.round(((player['MC-Bat'] || 0) + (player['YD-Bat'] || 0)) * 10),
-                  pitching: Math.round(((player['MC-Pitch'] || 0) + (player['YD-Pitch'] || 0)) * 10),
-                  fielding: Math.round(((player['MC-Field'] || 0) + (player['YD-Field'] || 0)) * 10),
-                  overall: Math.round(((player['MC-Ovr'] || 0) + (player.Ratg || 0)) * 10),
+                  batting: Math.round((player['MC-Bat'] || 0) * 20),
+                  pitching: Math.round((player['MC-Pitch'] || 0) * 20),
+                  fielding: Math.round((player['MC-Field'] || 0) * 20),
+                  overall: Math.round((player['MC-Ovr'] || 0) * 20),
                   mc_batting: player['MC-Bat'],
                   mc_fielding: player['MC-Field'],
                   mc_pitching: player['MC-Pitch'],
@@ -284,22 +288,14 @@ db.serialize(() => {
                   age: player.Age,
                   py_division: player['PY Division'],
                   rating: player.Ratg?.toString(),
-                  notes: [
-                    player.Comments,
-                    player['YD Notes']
-                  ].filter(note => note).join(', ') || null
+                  notes: [player.Comments, player['YD Notes']].filter(note => note).join(', ') || null
                 };
 
                 // Calculate overall rating
                 const overall = Math.round((mappedPlayer.batting + mappedPlayer.pitching + mappedPlayer.fielding) / 3);
 
-                // Log the mapping for debugging
+                // Update debug logging to use new field names
                 console.log(`Processing ${mappedPlayer.name}: `, {
-                  original: {
-                    batting: player.Batting,
-                    fielding: player.Fiedling,
-                    throwing: player.Throwing
-                  },
                   mapped: {
                     batting: mappedPlayer.batting,
                     pitching: mappedPlayer.pitching,
@@ -541,6 +537,19 @@ app.get('/pick-order', (req, res) => {
   `, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
+  });
+});
+
+// Update debug endpoint to include comments
+app.get('/players/debug/:name', (req, res) => {
+  const name = req.params.name;
+  db.get(`
+    SELECT name, mc_pitching, yd_pitching, mc_overall, notes, position, py_division 
+    FROM players 
+    WHERE name LIKE ?
+  `, [`%${name}%`], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(row);
   });
 });
 
