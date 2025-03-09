@@ -58,6 +58,12 @@ export interface PickOrder {
   managers: string;
 }
 
+export interface IneligiblePlayer {
+  Grade: number;
+  "Draft Number": number;
+  Name: string;
+}
+
 // Player API calls
 export const getPlayers = async (): Promise<Player[]> => {
   const response = await axios.get(`${API_URL}/players`);
@@ -118,4 +124,10 @@ export const updateDraftState = async (state: DraftState): Promise<DraftState> =
 export const getPickOrder = async (): Promise<PickOrder[]> => {
   const response = await axios.get(`${API_URL}/pick-order`);
   return response.data;
-}; 
+};
+
+export async function getIneligiblePlayers(): Promise<IneligiblePlayer[]> {
+  const response = await fetch('/assets/data/ineligible_players.json');
+  if (!response.ok) throw new Error('Failed to load ineligible players');
+  return response.json();
+} 

@@ -5,6 +5,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatOptionModule } from '@angular/material/core';
 import { PlayerService } from '../services/player.service';
 import * as ApiService from '../services/api.service';
+import { IneligiblePlayer } from '../services/api.service';
 
 interface ExtendedPlayer extends ApiService.Player {
   comments: string[];
@@ -81,6 +82,8 @@ export class PlayerListComponent implements OnInit {
   secondRowTeams: ApiService.Team[] = [];
   cdkTeam?: ApiService.Team;
 
+  ineligiblePlayers: IneligiblePlayer[] = [];
+
   get currentPickNumber(): number {
     return this.currentRound === 1 
       ? this.currentPickIndex + 1 
@@ -109,12 +112,12 @@ export class PlayerListComponent implements OnInit {
   }
   
   async fetchAllData() {
-    // Fetch all required data in parallel
     await Promise.all([
       this.fetchPlayers(),
       this.fetchTeams(),
       this.fetchPicks(),
-      this.fetchDraftState()
+      this.fetchDraftState(),
+      this.fetchIneligiblePlayers()
     ]);
   }
   
@@ -185,6 +188,14 @@ export class PlayerListComponent implements OnInit {
       this.currentPickIndex = state.current_pick_index;
     } catch (err) {
       console.error('Error loading draft state:', err);
+    }
+  }
+  
+  async fetchIneligiblePlayers() {
+    try {
+      this.ineligiblePlayers = await ApiService.getIneligiblePlayers();
+    } catch (err) {
+      console.error('Error loading ineligible players:', err);
     }
   }
   
@@ -300,7 +311,6 @@ export class PlayerListComponent implements OnInit {
         const fullName = player.name.toLowerCase();
         const nameParts = fullName.split(' ');
         
-        // Only filter out drafted players, keep coaches' kids visible
         return (fullName.includes(searchTerm) || 
                nameParts.some(part => part.includes(searchTerm))) &&
                !this.isPlayerDrafted(player.id);
@@ -455,7 +465,7 @@ export class PlayerListComponent implements OnInit {
       .filter(p => 
         p.grade === 3 && 
         !this.isPlayerDrafted(p.id) &&
-        !this.isCoachesKid(p)
+        !this.isPlayerIneligible(p)
       )
       .sort((a, b) => (b.mc_pitching || 0) - (a.mc_pitching || 0));
       
@@ -463,7 +473,7 @@ export class PlayerListComponent implements OnInit {
       .filter(p => 
         p.grade === 2 && 
         !this.isPlayerDrafted(p.id) &&
-        !this.isCoachesKid(p)
+        !this.isPlayerIneligible(p)
       )
       .sort((a, b) => (b.mc_pitching || 0) - (a.mc_pitching || 0));
   }
@@ -485,5 +495,22 @@ export class PlayerListComponent implements OnInit {
     return player.notes.includes('CC-Green') || 
            player.notes.includes('CC-3rd') || 
            player.notes.startsWith('CC-');
+  }
+
+  isPlayerIneligible(player: ApiService.Player): boolean {
+    if (this.isCoachesKid(player)) return true;
+    
+    return this.ineligiblePlayers.some(
+      ineligible => ineligible.Name.toLowerCase() === player.name.toLowerCase()
+    );
+  }
+
+  getIneligibilityReason(player: ApiService.Player): string {
+    if (this.isCoachesKid(player)) return "Coach's Kid";
+    
+    const ineligiblePlayer = this.ineligiblePlayers.find(
+      p => p.Name.toLowerCase() === player.name.toLowerCase()
+    );
+    return ineligiblePlayer ? "Selected for Blue Division" : '';
   }
 }
