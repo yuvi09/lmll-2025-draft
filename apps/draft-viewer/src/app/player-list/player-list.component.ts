@@ -239,46 +239,65 @@ export class PlayerListComponent implements OnInit {
         return;
       }
 
+      // First verify current state matches server
+      const serverState = await this.apiService.getDraftState();
+      if (serverState.current_round !== this.currentRound || 
+          serverState.current_pick_index !== this.currentPickIndex) {
+        // States are out of sync, refresh from server
+        this.currentRound = serverState.current_round;
+        this.currentPickIndex = serverState.current_pick_index;
+        await this.fetchPicks();
+        return;
+      }
+
       const roundOrder = this.getCurrentRoundPickOrder();
       const currentTeam = roundOrder[this.currentPickIndex];
-      
-      console.log('Submitting pick:', {
-        playerId: this.selectedPlayer,
-        teamNumber: currentTeam.teamNumber,
-        round: this.currentRound,
-        pickNumber: this.currentPickNumber
-      });
-      
-      await this.apiService.addPick(
+
+      const response = await this.apiService.addPick(
         this.selectedPlayer,
         currentTeam.teamNumber,
         this.currentRound,
         this.currentPickNumber
       );
 
-      // Update draft state in database
-      await this.apiService.updateDraftState({
-        current_round: this.currentRound,
-        current_pick_index: this.currentPickIndex
-      });
-
-      // Refresh picks after adding new one
-      await this.fetchPicks();
-
-      // Move to next pick
+      // Only update state if pick was successful
       this.currentPickIndex++;
       if (this.currentPickIndex >= roundOrder.length) {
         this.currentPickIndex = 0;
         this.currentRound++;
       }
 
+      await this.apiService.updateDraftState({
+        current_round: this.currentRound,
+        current_pick_index: this.currentPickIndex
+      });
+
+      // Refresh data
+      await this.fetchPicks();
+      this.selectedPlayer = null;
+      this.playerSearch = '';
+
+    } catch (err: any) {
+      console.error('Error adding pick:', err);
       // Reset selection
       this.selectedPlayer = null;
       this.playerSearch = '';
-    } catch (err: any) {
-      console.error('Error adding pick:', err);
-      console.error('Error response:', err.response?.data);
-      this.error.addPick = err.response?.data?.error || 'Failed to add pick';
+      
+      // Show error to user
+      if (err.response?.data?.error === 'Player already drafted') {
+        this.error.addPick = 'This player has already been drafted';
+      } else {
+        this.error.addPick = 'Error adding pick. Please try again.';
+      }
+      
+      // Refresh state from server to ensure we're in sync
+      await this.fetchDraftState();
+      await this.fetchPicks();
+      
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        this.error.addPick = null;
+      }, 3000);
     }
   }
   
