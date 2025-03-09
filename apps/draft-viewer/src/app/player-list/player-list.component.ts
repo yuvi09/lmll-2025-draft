@@ -4,10 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatOptionModule } from '@angular/material/core';
 import { PlayerService } from '../services/player.service';
-import * as ApiService from '../services/api.service';
-import { IneligiblePlayer } from '../services/api.service';
+import { ApiService, Player, Team, Pick, IneligiblePlayer } from '../services/api.service';
 
-interface ExtendedPlayer extends ApiService.Player {
+interface ExtendedPlayer extends Player {
   comments: string[];
 }
 
@@ -21,6 +20,13 @@ interface NewPick {
 interface DraftTeam {
   pickNumber: number;
   teamNumber: number;
+  managers: string;
+}
+
+// Add interface for pick order response
+interface PickOrderResponse {
+  pick_number: number;
+  team_number: number;
   managers: string;
 }
 
@@ -39,8 +45,8 @@ interface DraftTeam {
 })
 export class PlayerListComponent implements OnInit {
   recentPlayers: ExtendedPlayer[] = [];
-  thirdGradePlayers: ApiService.Player[] = [];
-  secondGradePlayers: ApiService.Player[] = [];
+  thirdGradePlayers: Player[] = [];
+  secondGradePlayers: Player[] = [];
   error = {
     players: null as string | null,
     teams: null as string | null,
@@ -53,12 +59,12 @@ export class PlayerListComponent implements OnInit {
     draftNo: undefined,
     name: ''
   };
-  allPlayers: ApiService.Player[] = [];
-  filteredPlayers: ApiService.Player[] = [];
-  players: ApiService.Player[] = [];
-  teams: ApiService.Team[] = [];
-  picks: ApiService.Pick[] = [];
-  teamSixPicks: ApiService.Pick[] = []; // Picks for Team 6
+  allPlayers: Player[] = [];
+  filteredPlayers: Player[] = [];
+  players: Player[] = [];
+  teams: Team[] = [];
+  picks: Pick[] = [];
+  teamSixPicks: Pick[] = []; // Picks for Team 6
   
   // Form data for Add Pick
   selectedPlayer: number | null = null;
@@ -78,11 +84,13 @@ export class PlayerListComponent implements OnInit {
   currentRound: number = 1;
   currentPickIndex: number = 0;
 
-  firstRowTeams: ApiService.Team[] = [];
-  secondRowTeams: ApiService.Team[] = [];
-  cdkTeam?: ApiService.Team;
+  firstRowTeams: Team[] = [];
+  secondRowTeams: Team[] = [];
+  cdkTeam?: Team;
 
   ineligiblePlayers: IneligiblePlayer[] = [];
+
+  isOffline = false;
 
   get currentPickNumber(): number {
     return this.currentRound === 1 
@@ -104,7 +112,19 @@ export class PlayerListComponent implements OnInit {
       : '';
   }
   
-  constructor(private playerService: PlayerService) {}
+  constructor(
+    private playerService: PlayerService,
+    private apiService: ApiService
+  ) {
+    window.addEventListener('online', () => {
+      this.isOffline = false;
+      this.fetchAllData();
+    });
+    
+    window.addEventListener('offline', () => {
+      this.isOffline = true;
+    });
+  }
 
   async ngOnInit() {
     await this.fetchAllData();
@@ -112,19 +132,29 @@ export class PlayerListComponent implements OnInit {
   }
   
   async fetchAllData() {
-    await Promise.all([
-      this.fetchPlayers(),
-      this.fetchTeams(),
-      this.fetchPicks(),
-      this.fetchDraftState(),
-      this.fetchIneligiblePlayers()
-    ]);
+    if (this.isOffline) {
+      console.warn('App is offline, using cached data if available');
+      return;
+    }
+
+    try {
+      await Promise.all([
+        this.fetchPlayers(),
+        this.fetchTeams(),
+        this.fetchPicks(),
+        this.fetchDraftState(),
+        this.fetchIneligiblePlayers()
+      ]);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      // Show offline message or fallback UI
+    }
   }
   
   async fetchPlayers() {
     try {
       this.loading.players = true;
-      this.players = await ApiService.getPlayers();
+      this.players = await this.apiService.getPlayers();
       
       // Update the available players lists
       this.updateAvailablePlayers();
@@ -142,14 +172,14 @@ export class PlayerListComponent implements OnInit {
       
       // Fetch teams and pick order in parallel
       const [teams, pickOrder] = await Promise.all([
-        ApiService.getTeams(),
-        ApiService.getPickOrder()
+        this.apiService.getTeams(),
+        this.apiService.getPickOrder()
       ]);
       
       this.teams = teams;
       
       // Create draftOrder from database pick order
-      this.draftOrder = pickOrder.map(order => ({
+      this.draftOrder = pickOrder.map((order: PickOrderResponse) => ({
         pickNumber: order.pick_number,
         teamNumber: order.team_number,
         managers: order.managers
@@ -166,7 +196,7 @@ export class PlayerListComponent implements OnInit {
   async fetchPicks() {
     try {
       this.loading.picks = true;
-      this.picks = await ApiService.getPicks();
+      this.picks = await this.apiService.getPicks();
       
       // Filter picks for Team 6
       this.teamSixPicks = this.picks.filter(pick => pick.team_number === 6);
@@ -183,7 +213,7 @@ export class PlayerListComponent implements OnInit {
   
   async fetchDraftState() {
     try {
-      const state = await ApiService.getDraftState();
+      const state = await this.apiService.getDraftState();
       this.currentRound = state.current_round;
       this.currentPickIndex = state.current_pick_index;
     } catch (err) {
@@ -193,7 +223,7 @@ export class PlayerListComponent implements OnInit {
   
   async fetchIneligiblePlayers() {
     try {
-      this.ineligiblePlayers = await ApiService.getIneligiblePlayers();
+      this.ineligiblePlayers = await this.apiService.getIneligiblePlayers();
     } catch (err) {
       console.error('Error loading ineligible players:', err);
     }
@@ -219,7 +249,7 @@ export class PlayerListComponent implements OnInit {
         pickNumber: this.currentPickNumber
       });
       
-      await ApiService.addPick(
+      await this.apiService.addPick(
         this.selectedPlayer,
         currentTeam.teamNumber,
         this.currentRound,
@@ -227,7 +257,7 @@ export class PlayerListComponent implements OnInit {
       );
 
       // Update draft state in database
-      await ApiService.updateDraftState({
+      await this.apiService.updateDraftState({
         current_round: this.currentRound,
         current_pick_index: this.currentPickIndex
       });
@@ -365,7 +395,7 @@ export class PlayerListComponent implements OnInit {
     this.cdkTeam = this.teams.find(team => team.team_number === 6);
   }
 
-  getTeamPicks(teamNumber: number): ApiService.Pick[] {
+  getTeamPicks(teamNumber: number): Pick[] {
     return this.picks.filter(pick => pick.team_number === teamNumber);
   }
 
@@ -373,8 +403,8 @@ export class PlayerListComponent implements OnInit {
   async resetDraft() {
     if (confirm('Are you sure you want to reset the draft? This will clear all picks.')) {
       try {
-        await ApiService.clearPicks();
-        await ApiService.updateDraftState({
+        await this.apiService.clearPicks();
+        await this.apiService.updateDraftState({
           current_round: 1,
           current_pick_index: 0
         });
@@ -393,6 +423,8 @@ export class PlayerListComponent implements OnInit {
 
   get nextPickTeam(): string {
     const roundOrder = this.getCurrentRoundPickOrder();
+    if (!roundOrder?.length) return 'Loading...';
+    
     const nextIndex = this.currentPickIndex + 1;
     if (nextIndex >= roundOrder.length) {
       return 'Round Complete';
@@ -411,44 +443,70 @@ export class PlayerListComponent implements OnInit {
 
   async skipPick() {
     try {
+      // First verify current state matches server
+      const serverState = await this.apiService.getDraftState();
+      if (serverState.current_round !== this.currentRound || 
+          serverState.current_pick_index !== this.currentPickIndex) {
+        // States are out of sync, refresh from server
+        this.currentRound = serverState.current_round;
+        this.currentPickIndex = serverState.current_pick_index;
+        await this.fetchPicks(); // Refresh picks
+        return; // Don't proceed with skip
+      }
+
       const roundOrder = this.getCurrentRoundPickOrder();
       const currentTeam = roundOrder[this.currentPickIndex];
       
-      // Create a blank pick entry
-      await ApiService.addPick(
-        -1, // Use -1 to indicate skipped pick
+      // Verify this team hasn't already picked in this round
+      const teamPicks = this.picks.filter(p => 
+        p.team_number === currentTeam.teamNumber && 
+        p.round === this.currentRound
+      );
+      if (teamPicks.length > 0) {
+        // Team already has a pick this round, refresh state
+        await this.fetchPicks();
+        await this.fetchDraftState();
+        return;
+      }
+
+      // Proceed with skip if everything is in sync
+      await this.apiService.addPick(
+        -1,
         currentTeam.teamNumber,
         this.currentRound,
         this.currentPickNumber
       );
 
-      // Move to next pick
+      // Update local state after successful skip
       this.currentPickIndex++;
       if (this.currentPickIndex >= roundOrder.length) {
         this.currentPickIndex = 0;
         this.currentRound++;
       }
 
-      // Update draft state in database
-      await ApiService.updateDraftState({
+      // Update server state
+      await this.apiService.updateDraftState({
         current_round: this.currentRound,
         current_pick_index: this.currentPickIndex
       });
 
-      // Refresh picks to show the skipped pick
+      // Refresh picks
       await this.fetchPicks();
-
-      // Clear any existing selection
       this.selectedPlayer = null;
       this.playerSearch = '';
+
     } catch (err) {
       console.error('Error skipping pick:', err);
+      // On error, refresh state from server
+      await this.fetchDraftState();
+      await this.fetchPicks();
     }
   }
 
   // Add this helper method to get the current round's pick order
   getCurrentRoundPickOrder(): DraftTeam[] {
-    // If even round number, reverse the order
+    if (!this.draftOrder?.length) return [];
+    
     return this.currentRound % 2 === 0 
       ? [...this.draftOrder].reverse()
       : this.draftOrder;
@@ -478,7 +536,7 @@ export class PlayerListComponent implements OnInit {
       .sort((a, b) => (b.mc_pitching || 0) - (a.mc_pitching || 0));
   }
 
-  getPlayerRatingsTooltip(player: ApiService.Player): string {
+  getPlayerRatingsTooltip(player: Player): string {
     return `
       MC Rating: ${player.mc_pitching || 'N/A'}
       YD Rating: ${player.yd_pitching || 'N/A'}
@@ -490,14 +548,14 @@ export class PlayerListComponent implements OnInit {
   }
 
   // Add this helper method
-  isCoachesKid(player: ApiService.Player): boolean {
+  isCoachesKid(player: Player): boolean {
     if (!player.notes) return false;
     return player.notes.includes('CC-Green') || 
            player.notes.includes('CC-3rd') || 
            player.notes.startsWith('CC-');
   }
 
-  isPlayerIneligible(player: ApiService.Player): boolean {
+  isPlayerIneligible(player: Player): boolean {
     if (this.isCoachesKid(player)) return true;
     
     return this.ineligiblePlayers.some(
@@ -505,7 +563,7 @@ export class PlayerListComponent implements OnInit {
     );
   }
 
-  getIneligibilityReason(player: ApiService.Player): string {
+  getIneligibilityReason(player: Player): string {
     if (this.isCoachesKid(player)) return "Coach's Kid";
     
     const ineligiblePlayer = this.ineligiblePlayers.find(

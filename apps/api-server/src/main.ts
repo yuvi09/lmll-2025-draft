@@ -5,18 +5,186 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const app = express();
-const DB_PATH = 'apps/api-server/db/draft.db';
+const DB_PATH = process.env.DB_PATH || './data/draft.db';
 
-// Delete database only if --reset-db flag is passed
-if (process.argv.includes('--reset-db')) {
-  console.log('Resetting database...');
-  if (fs.existsSync(DB_PATH)) {
-    fs.unlinkSync(DB_PATH);
-    console.log('Database file deleted');
+// Add this helper function at the top of the file
+function findProjectRoot(startDir: string): string {
+  let currentDir = startDir;
+  while (currentDir !== '/') {
+    if (fs.existsSync(path.join(currentDir, 'nx.json'))) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
   }
+  throw new Error('Could not find project root');
+}
+
+const PROJECT_ROOT = findProjectRoot(process.cwd());
+
+// Ensure data directory exists
+const dataDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
 }
 
 const db = new Database(DB_PATH);
+
+// Move clearDatabase function definition to the top
+const clearDatabase = () => {
+  return new Promise<void>((resolve, reject) => {
+    db.serialize(() => {
+      // Drop existing tables in reverse order due to foreign key constraints
+      db.run('DROP TABLE IF EXISTS picks');
+      db.run('DROP TABLE IF EXISTS teams');
+      db.run('DROP TABLE IF EXISTS players');
+      db.run('DROP TABLE IF EXISTS draft_state');
+      db.run('DROP TABLE IF EXISTS pick_order');
+      resolve();
+    });
+  });
+};
+
+// Enable WAL mode for better reliability
+db.run('PRAGMA journal_mode = WAL');
+
+// Move initialization logic to a function
+function initializeDatabase(shouldSeed = true) {
+  return new Promise<void>((resolve, reject) => {
+    db.serialize(() => {
+      try {
+        // Create tables
+        db.run(`CREATE TABLE IF NOT EXISTS players (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          grade INTEGER NOT NULL,
+          batting INTEGER NOT NULL,
+          pitching INTEGER NOT NULL,
+          fielding INTEGER NOT NULL,
+          overall INTEGER NOT NULL,
+          draft_number INTEGER,
+          position TEXT,
+          mc_batting INTEGER,
+          mc_fielding INTEGER,
+          mc_pitching INTEGER,
+          mc_overall INTEGER,
+          yd_batting INTEGER,
+          yd_fielding INTEGER,
+          yd_pitching INTEGER,
+          age REAL,
+          py_division TEXT,
+          rating TEXT,
+          notes TEXT
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS teams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          team_number INTEGER NOT NULL UNIQUE,
+          name TEXT NOT NULL,
+          managers TEXT NOT NULL
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS picks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          player_id INTEGER,
+          team_id INTEGER NOT NULL,
+          round INTEGER NOT NULL,
+          pick_number INTEGER NOT NULL,
+          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (player_id) REFERENCES players (id),
+          FOREIGN KEY (team_id) REFERENCES teams (id)
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS draft_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          current_round INTEGER NOT NULL DEFAULT 1,
+          current_pick_index INTEGER NOT NULL DEFAULT 0
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS pick_order (
+          pick_number INTEGER PRIMARY KEY,
+          team_number INTEGER NOT NULL,
+          FOREIGN KEY (team_number) REFERENCES teams (team_number)
+        )`);
+
+        if (shouldSeed) {
+          // Seed teams first - teams array already has the correct order
+          teams.forEach(([number, name, managers]) => {
+            db.run('INSERT OR IGNORE INTO teams (team_number, name, managers) VALUES (?, ?, ?)',
+              [number, name, managers]);
+          });
+
+          // Initialize draft state
+          db.run('INSERT OR IGNORE INTO draft_state (id, current_round, current_pick_index) VALUES (1, 1, 0)');
+
+          // Generate pick order from teams array - maintains the order teams are defined in
+          teams.forEach(([teamNumber], index) => {
+            db.run('INSERT OR IGNORE INTO pick_order (pick_number, team_number) VALUES (?, ?)',
+              [index + 1, teamNumber]);
+          });
+
+          // Read player data from file using absolute path from project root
+          const playerDataPath = path.join(
+            PROJECT_ROOT,
+            'apps/draft-viewer/src/assets/data/player_ratings_combined.json'
+          );
+          
+          console.log('Current directory:', process.cwd());
+          console.log('Project root:', PROJECT_ROOT);
+          console.log('Loading player data from:', playerDataPath);
+          
+          const playerData = JSON.parse(fs.readFileSync(playerDataPath, 'utf8')) as PlayerRating[];
+          
+          playerData.forEach((player: PlayerRating) => {
+            db.run(`
+              INSERT OR IGNORE INTO players (
+                name, grade, batting, pitching, fielding, overall, draft_number,
+                position, mc_batting, mc_fielding, mc_pitching, mc_overall,
+                yd_batting, yd_fielding, yd_pitching, age, py_division, rating, notes
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              player.Name,
+              parseInt(player.Grd),
+              player['MC-Bat'] || 0,
+              player['MC-Pitch'] || 0,
+              player['MC-Field'] || 0,
+              player['MC-Ovr'] || 0,
+              player['D#'],
+              player.Pos,
+              player['MC-Bat'],
+              player['MC-Field'],
+              player['MC-Pitch'],
+              player['MC-Ovr'],
+              player['YD-Bat'],
+              player['YD-Field'],
+              player['YD-Pitch'],
+              player.Age,
+              player['PY Division'],
+              player.Ratg,
+              player.Comments
+            ]);
+          });
+        }
+
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+// Update how we use initializeDatabase
+if (process.argv.includes('--reset-db')) {
+  console.log('Resetting database...');
+  clearDatabase()
+    .then(() => initializeDatabase(true))
+    .then(() => console.log('Database initialized'))
+    .catch(err => console.error('Error initializing database:', err));
+} else {
+  initializeDatabase(false)
+    .then(() => console.log('Database checked/initialized'))
+    .catch(err => console.error('Error checking database:', err));
+}
 
 app.use(cors());
 app.use(express.json()); // Allows JSON request bodies
@@ -74,281 +242,6 @@ const teams = [
   [2, 'Team 2', 'Gedney, Kohlasch, Paonessa'],
   [7, 'Team 7', 'Diskin, Fitzpatrick']
 ] as const;
-
-// Add this function after database initialization
-const clearDatabase = () => {
-  return new Promise<void>((resolve, reject) => {
-    db.serialize(() => {
-      // Drop existing tables in reverse order due to foreign key constraints
-      db.run('DROP TABLE IF EXISTS picks');
-      db.run('DROP TABLE IF EXISTS teams');
-      db.run('DROP TABLE IF EXISTS players');
-      db.run('DROP TABLE IF EXISTS draft_state');
-      db.run('DROP TABLE IF EXISTS pick_order');
-      resolve();
-    });
-  });
-};
-
-// Modify the db.serialize section to use clearDatabase first
-db.serialize(() => {
-  // Clear the database first
-  clearDatabase().then(() => {
-    // First create the tables with basic structure
-    db.run(`
-      CREATE TABLE IF NOT EXISTS players (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        grade INTEGER NOT NULL,
-        batting INTEGER NOT NULL,
-        pitching INTEGER NOT NULL,
-        fielding INTEGER NOT NULL,
-        overall INTEGER NOT NULL,
-        draft_number INTEGER,
-        position TEXT,
-        mc_batting INTEGER,
-        mc_fielding INTEGER,
-        mc_pitching INTEGER,
-        mc_overall INTEGER,
-        yd_batting INTEGER,
-        yd_fielding INTEGER,
-        yd_pitching INTEGER,
-        age REAL,
-        py_division TEXT,
-        rating TEXT,
-        notes TEXT
-      )
-    `);
-
-    // Then add any missing columns
-    db.all("PRAGMA table_info(players)", [], (err, rows) => {
-      if (err) {
-        console.error('Error checking table schema:', err.message);
-        return;
-      }
-
-      const columnInfo = (Array.isArray(rows) ? rows : []) as ColumnInfo[];
-      console.log('Column info:', columnInfo);
-
-      // Chain the ALTER TABLE operations
-      const addColumns = () => {
-        return new Promise<void>((resolve, reject) => {
-          db.serialize(() => {
-            // First create teams table
-            db.run(`
-              CREATE TABLE IF NOT EXISTS teams (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                team_number INTEGER NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                managers TEXT NOT NULL
-              )
-            `);
-
-            // Then add the teams data
-            const stmt = db.prepare(`
-              INSERT OR IGNORE INTO teams (team_number, name, managers)
-              VALUES (?, ?, ?)
-            `);
-
-            teams.forEach(([number, name, managers]) => {
-              stmt.run(number, name, managers);
-            });
-
-            stmt.finalize();
-
-            // Then add columns to players table if needed
-            if (!columnInfo.some(row => row.name === 'overall')) {
-              db.run('ALTER TABLE players ADD COLUMN overall INTEGER');
-            }
-            if (!columnInfo.some(row => row.name === 'position')) {
-              db.run('ALTER TABLE players ADD COLUMN position TEXT');
-            }
-            if (!columnInfo.some(row => row.name === 'height')) {
-              db.run('ALTER TABLE players ADD COLUMN height TEXT');
-            }
-            if (!columnInfo.some(row => row.name === 'weight')) {
-              db.run('ALTER TABLE players ADD COLUMN weight TEXT');
-            }
-            if (!columnInfo.some(row => row.name === 'bats')) {
-              db.run('ALTER TABLE players ADD COLUMN bats TEXT');
-            }
-            if (!columnInfo.some(row => row.name === 'throws')) {
-              db.run('ALTER TABLE players ADD COLUMN throws TEXT');
-            }
-            if (!columnInfo.some(row => row.name === 'notes')) {
-              db.run('ALTER TABLE players ADD COLUMN notes TEXT');
-            }
-
-            // Add this to the database initialization section
-            db.run(`
-              CREATE TABLE IF NOT EXISTS draft_state (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                current_round INTEGER NOT NULL DEFAULT 1,
-                current_pick_index INTEGER NOT NULL DEFAULT 0
-              )
-            `);
-
-            // Initialize draft state if not exists
-            db.get('SELECT * FROM draft_state WHERE id = 1', [], (err, row) => {
-              if (!row) {
-                db.run('INSERT INTO draft_state (id, current_round, current_pick_index) VALUES (1, 1, 0)');
-              }
-            });
-
-            // Add this to the database initialization section
-            db.run(`
-              CREATE TABLE IF NOT EXISTS pick_order (
-                pick_number INTEGER PRIMARY KEY,
-                team_number INTEGER NOT NULL,
-                FOREIGN KEY (team_number) REFERENCES teams (team_number)
-              )
-            `);
-
-            // Initialize pick order if not exists
-            const pickOrderData = [
-              [1, 11], [2, 6], [3, 4], [4, 5], [5, 8], [6, 3], [7, 1],
-              [8, 9], [9, 10], [10, 12], [11, 13], [12, 2], [13, 7]
-            ];
-
-            db.get('SELECT COUNT(*) as count FROM pick_order', [], (err, row: any) => {
-              if (err || row.count === 0) {
-                const stmt = db.prepare('INSERT INTO pick_order (pick_number, team_number) VALUES (?, ?)');
-                pickOrderData.forEach(([pick, team]) => stmt.run(pick, team));
-                stmt.finalize();
-              }
-            });
-
-            resolve();
-          });
-        });
-      };
-
-      // Execute the column additions and then continue with seeding
-      addColumns().then(() => {
-        console.log('Finished adding columns');
-        
-        // Draft picks table with round information
-        db.run(`
-          CREATE TABLE IF NOT EXISTS picks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id INTEGER,
-            team_id INTEGER NOT NULL,
-            round INTEGER NOT NULL,
-            pick_number INTEGER NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (player_id) REFERENCES players (id),
-            FOREIGN KEY (team_id) REFERENCES teams (id)
-          )
-        `);
-
-        // Seed database with player data if the players table is empty
-        db.get('SELECT COUNT(*) as count FROM players', [], (err, result) => {
-          if (err) {
-            console.error('Error checking players table:', err.message);
-            return;
-          }
-          
-          // Only seed if no players exist
-          if ((result as {count: number}).count === 0) {
-            try {
-              const playerDataPath = path.resolve('apps/draft-viewer/src/assets/data/player_ratings_combined.json');
-              const playerData = JSON.parse(fs.readFileSync(playerDataPath, 'utf8'));
-              
-              // Begin transaction for faster inserts
-              db.run('BEGIN TRANSACTION');
-              
-              // Prepare statement with all fields
-              const stmt = db.prepare(`
-                INSERT INTO players (
-                  name, grade, batting, pitching, fielding, overall, draft_number,
-                  position, mc_batting, mc_fielding, mc_pitching, mc_overall,
-                  yd_batting, yd_fielding, yd_pitching, age, py_division, rating,
-                  notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-              `);
-              
-              playerData.forEach((player: PlayerRating) => {
-                console.log('Player MC-Ovr:', player['MC-Ovr']);
-                const mappedPlayer = {
-                  name: player.Name,
-                  grade: player.Grd === '2nd' ? 2 : 3,
-                  batting: Math.round((player['MC-Bat'] || 0) * 20),
-                  pitching: Math.round((player['MC-Pitch'] || 0) * 20),
-                  fielding: Math.round((player['MC-Field'] || 0) * 20),
-                  overall: Math.round((player['MC-Ovr'] || 0) * 20),
-                  mc_batting: player['MC-Bat'],
-                  mc_fielding: player['MC-Field'],
-                  mc_pitching: player['MC-Pitch'],
-                  mc_overall: player['MC-Ovr'],
-                  yd_batting: player['YD-Bat'],
-                  yd_fielding: player['YD-Field'],
-                  yd_pitching: player['YD-Pitch'],
-                  draft_number: player['D#'],
-                  position: player.Pos,
-                  age: player.Age,
-                  py_division: player['PY Division'],
-                  rating: player.Ratg?.toString(),
-                  notes: [player.Comments, player['YD Notes']].filter(note => note).join(', ') || null
-                };
-
-                // Calculate overall rating
-                const overall = Math.round((mappedPlayer.batting + mappedPlayer.pitching + mappedPlayer.fielding) / 3);
-
-                // Update debug logging to use new field names
-                console.log(`Processing ${mappedPlayer.name}: `, {
-                  mapped: {
-                    batting: mappedPlayer.batting,
-                    pitching: mappedPlayer.pitching,
-                    fielding: mappedPlayer.fielding,
-                    overall
-                  }
-                });
-
-                stmt.run(
-                  mappedPlayer.name.trim(),
-                  mappedPlayer.grade,
-                  mappedPlayer.batting,
-                  mappedPlayer.pitching,
-                  mappedPlayer.fielding,
-                  overall,
-                  mappedPlayer.draft_number,
-                  mappedPlayer.position?.trim() || null,
-                  mappedPlayer.mc_batting,
-                  mappedPlayer.mc_fielding,
-                  mappedPlayer.mc_pitching,
-                  mappedPlayer.mc_overall,
-                  mappedPlayer.yd_batting,
-                  mappedPlayer.yd_fielding,
-                  mappedPlayer.yd_pitching,
-                  mappedPlayer.age,
-                  mappedPlayer.py_division,
-                  mappedPlayer.rating,
-                  mappedPlayer.notes
-                );
-              });
-              
-              stmt.finalize();
-              
-              db.run('COMMIT', [], (err) => {
-                if (err) {
-                  console.error('Error committing transaction:', err.message);
-                } else {
-                  console.log(`Database seeded with ${playerData.length} players and ${teams.length} teams`);
-                }
-              });
-            } catch (error) {
-              console.error('Error seeding database:', error);
-            }
-          } else {
-            console.log('Database already contains player data, skipping seed');
-          }
-        });
-      }).catch(err => {
-        console.error('Error adding columns:', err);
-      });
-    });
-  });
-});
 
 // API: Get all players
 app.get('/players', (req, res) => {
@@ -550,6 +443,23 @@ app.get('/players/debug/:name', (req, res) => {
   `, [`%${name}%`], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(row);
+  });
+});
+
+// Add this debug endpoint after other endpoints
+app.get('/debug/pick-order', (req, res) => {
+  db.all(`
+    SELECT 
+      po.pick_number,
+      po.team_number,
+      t.name,
+      t.managers
+    FROM pick_order po
+    JOIN teams t ON po.team_number = t.team_number
+    ORDER BY po.pick_number
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
 });
 
