@@ -576,16 +576,26 @@ export class PlayerListComponent implements OnInit {
   }
 
   isPlayerIneligible(player: Player): boolean {
+    // Check if player is already drafted
+    if (this.isPlayerDrafted(player.id)) return true;
+    
+    // Check if player is a coach's kid
     if (this.isCoachesKid(player)) return true;
     
+    // Check if player is selected for Blue Division
     return this.ineligiblePlayers.some(
       ineligible => ineligible.Name.toLowerCase() === player.name.toLowerCase()
     );
   }
 
   getIneligibilityReason(player: Player): string {
+    // Check if player is already drafted
+    if (this.isPlayerDrafted(player.id)) return "Already Drafted";
+    
+    // Check if player is a coach's kid
     if (this.isCoachesKid(player)) return "Coach's Kid";
     
+    // Check if player is selected for Blue Division
     const ineligiblePlayer = this.ineligiblePlayers.find(
       p => p.Name.toLowerCase() === player.name.toLowerCase()
     );
