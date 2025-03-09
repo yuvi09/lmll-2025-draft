@@ -279,20 +279,21 @@ export class PlayerListComponent implements OnInit {
 
     } catch (err: any) {
       console.error('Error adding pick:', err);
-      // Reset selection
-      this.selectedPlayer = null;
-      this.playerSearch = '';
       
       // Show error to user
       if (err.response?.data?.error === 'Player already drafted') {
         this.error.addPick = 'This player has already been drafted';
+      } else if (err.response?.data?.error === 'Team already has a pick in this round') {
+        // Try to recover the draft state
+        await this.recoverDraftState();
+        this.error.addPick = 'Draft order has been restored to the next available pick';
       } else {
         this.error.addPick = 'Error adding pick. Please try again.';
       }
       
-      // Refresh state from server to ensure we're in sync
-      await this.fetchDraftState();
-      await this.fetchPicks();
+      // Reset selection
+      this.selectedPlayer = null;
+      this.playerSearch = '';
       
       // Clear error after 3 seconds
       setTimeout(() => {
@@ -589,5 +590,76 @@ export class PlayerListComponent implements OnInit {
       p => p.Name.toLowerCase() === player.name.toLowerCase()
     );
     return ineligiblePlayer ? "Selected for Blue Division" : '';
+  }
+
+  // Add a new method to handle recovery from stuck states
+  async recoverDraftState() {
+    try {
+      // Get all picks for the current round
+      const currentRoundPicks = this.picks.filter(p => p.round === this.currentRound);
+      
+      // Find the next team that hasn't picked in this round
+      const roundOrder = this.getCurrentRoundPickOrder();
+      let nextPickIndex = 0;
+      
+      for (let i = 0; i < roundOrder.length; i++) {
+        const teamHasPicked = currentRoundPicks.some(
+          pick => pick.team_number === roundOrder[i].teamNumber
+        );
+        if (!teamHasPicked) {
+          nextPickIndex = i;
+          break;
+        }
+      }
+
+      // Update state to the correct next pick
+      this.currentPickIndex = nextPickIndex;
+      await this.apiService.updateDraftState({
+        current_round: this.currentRound,
+        current_pick_index: nextPickIndex
+      });
+
+      // Refresh data
+      await this.fetchPicks();
+      this.selectedPlayer = null;
+      this.playerSearch = '';
+      
+    } catch (err) {
+      console.error('Error recovering draft state:', err);
+    }
+  }
+
+  // Add a recovery button for admins/manual intervention
+  async forceNextPick() {
+    if (!confirm('Are you sure you want to force advance to the next pick? This should only be used if the draft is stuck.')) {
+      return;
+    }
+
+    try {
+      await this.recoverDraftState();
+    } catch (err) {
+      console.error('Error forcing next pick:', err);
+      this.error.addPick = 'Failed to advance draft. Please try again.';
+    }
+  }
+
+  // Add this property
+  get isStuckState(): boolean {
+    // Consider the draft stuck if:
+    // 1. We have picks in the current round
+    // 2. The current team already has a pick in this round
+    const currentRoundPicks = this.picks.filter(p => p.round === this.currentRound);
+    const roundOrder = this.getCurrentRoundPickOrder();
+    
+    if (!roundOrder.length || this.currentPickIndex >= roundOrder.length) {
+      return false;
+    }
+
+    const currentTeam = roundOrder[this.currentPickIndex];
+    const teamHasPickedThisRound = currentRoundPicks.some(
+      pick => pick.team_number === currentTeam.teamNumber
+    );
+
+    return teamHasPickedThisRound;
   }
 }

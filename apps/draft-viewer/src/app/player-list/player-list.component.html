@@ -242,5 +242,13 @@
         Reset Draft
       </button>
     </div>
+
+    <!-- Add this somewhere in your template -->
+    <button 
+      *ngIf="isStuckState" 
+      (click)="forceNextPick()" 
+      class="recovery-button">
+      Force Next Pick
+    </button>
   </div>
 </div>
